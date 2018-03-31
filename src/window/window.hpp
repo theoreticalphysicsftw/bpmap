@@ -37,7 +37,7 @@ namespace bpmap
     class window_t
     {
         GLFWwindow* window;
-
+        window_init_params_t parameters;
         error_t error;
 
     public:
@@ -47,7 +47,13 @@ namespace bpmap
         error_t get_status() const { return error; }
         void poll_events();
 
-       const char_t** get_required_extensions(uint32_t& count);
+       const char_t** get_required_extensions(uint32_t&) const;
+       bool queue_supports_presentation(VkInstance, VkPhysicalDevice, uint32_t) const;
+
+       error_t create_surface(VkInstance instance, VkSurfaceKHR& surface);
+
+       uint32_t get_height(){ return parameters.height; }
+       uint32_t get_width(){ return parameters.width; }
     };
 
 }

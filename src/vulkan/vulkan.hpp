@@ -27,23 +27,58 @@
 
 namespace bpmap
 {
+    static constexpr uint32_t compute_queue = 0;
+    static constexpr uint32_t graphics_queue = 1;
+    static constexpr uint32_t copy_queue = 2;
+    static constexpr uint32_t number_of_queues = 3;
+
     class vulkan_t
     {
         VkInstance instance;
         VkDevice device;
-        VkQueue queue;
-        VkCommandPool command_pool;
+        VkSurfaceKHR surface;
+        VkSwapchainKHR swapchain;
 
-        uint32_t queue_index;
+        array_t<VkQueue,number_of_queues> queues;
+        array_t<VkCommandPool, number_of_queues> command_pools;
+
+        uint32_t graphics_queue_index;
+        uint32_t compute_queue_index;
+        uint32_t copy_queue_index;
 
         window_t* window;
 
         error_t error;
 
         error_t create_instance();
+        error_t find_gpu(VkPhysicalDevice&);
+
+        template <typename Lambda>
+        error_t find_queue(VkPhysicalDevice pd, uint32_t& queue_family, Lambda select)
+        {
+            std::vector<VkQueueFamilyProperties> properties;
+            uint32_t count;
+
+            vkGetPhysicalDeviceQueueFamilyProperties(pd, &count, nullptr);
+            properties.resize(count);
+            vkGetPhysicalDeviceQueueFamilyProperties(pd, &count, properties.data());
+
+            for(uint32_t i = 0; i < count; ++i)
+            {
+                if(select(properties[i], i))
+                {
+                    queue_family = i;
+                    return error_t::success;
+                }
+            }
+
+            return error_t::get_queue_fail;
+        }
+
         error_t create_logical_device();
-        error_t get_queue();
-        error_t create_command_pool();
+        error_t get_queues();
+        error_t create_command_pools();
+        error_t create_surface_and_swapchain();
 
     public:
 

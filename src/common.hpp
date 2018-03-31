@@ -23,9 +23,9 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <array>
 #include <variant>
 #include <utility>
-
 
 #if defined(_MSC_VER)
     #define BMAP_FORCE_INLINE __forceinline
@@ -46,6 +46,9 @@ namespace bpmap
 
     template <typename T>
     using darray_t = std::vector<T>;
+
+    template <typename T, size_t N>
+    using array_t = std::array<T,N>;
 
     template <class... U>
     using variant_t = std::variant<U...>;

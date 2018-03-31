@@ -24,6 +24,8 @@ namespace bpmap
 
     error_t window_t::init(window_init_params_t wip)
     {
+        parameters = wip;
+
         if(!glfwInit())
         {
             return error_t::window_creation_fail;
@@ -53,8 +55,27 @@ namespace bpmap
         glfwPollEvents();
     }
 
-    const char_t** window_t::get_required_extensions(uint32_t& count)
+    const char_t** window_t::get_required_extensions(uint32_t& count) const
     {
         return glfwGetRequiredInstanceExtensions(&count);
+    }
+
+    bool window_t::queue_supports_presentation(
+                                               VkInstance instance,
+                                               VkPhysicalDevice device,
+                                               uint32_t queue_family
+                                              ) const
+    {
+        return glfwGetPhysicalDevicePresentationSupport(instance, device, queue_family);
+    }
+
+    error_t window_t::create_surface(VkInstance instance, VkSurfaceKHR& surface)
+    {
+        if(glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+        {
+            return error_t::surface_creation_fail;
+        }
+
+        return error_t::success;
     }
 }
