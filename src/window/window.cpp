@@ -78,4 +78,33 @@ namespace bpmap
 
         return error_t::success;
     }
+
+    bool_t window_t::mouse_button_pressed(mouse_button_t button) const
+    {
+        int_t glfw_button;
+
+        switch(button)
+        {
+            case mouse_button_t::left: glfw_button = GLFW_MOUSE_BUTTON_LEFT; break;
+            case mouse_button_t::right: glfw_button = GLFW_MOUSE_BUTTON_RIGHT; break;
+            case mouse_button_t::middle: glfw_button = GLFW_MOUSE_BUTTON_MIDDLE; break;
+        }
+
+        return glfwGetMouseButton(window, glfw_button);
+    }
+
+    pair_t<int_t, int_t> window_t::get_mouse_pos() const
+    {
+        pair_t<int_t, int_t> result;
+
+        double_t x;
+        double_t y;
+
+        glfwGetCursorPos(window, &x, &y);
+
+        result.first = x;
+        result.second = y;
+
+        return result;
+    }
 }

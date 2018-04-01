@@ -31,6 +31,10 @@ namespace bpmap
         {
             error = vulkan.init(window);
         }
+
+        gui.bind_window(window);
+        gui_renderer.bind_gui(gui);
+        gui_renderer.bind_vulkan(vulkan);
     }
 
     void application_t::loop()

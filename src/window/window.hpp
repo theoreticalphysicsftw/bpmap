@@ -21,6 +21,7 @@
 
 #include <vulkan/vulkan.h>
 #include <glfw3.h>
+
 #include <common.hpp>
 #include <error.hpp>
 
@@ -32,6 +33,13 @@ namespace bpmap
         uint32_t width;
         uint32_t height;
         string_t name;
+    };
+
+    enum class mouse_button_t
+    {
+        left,
+        right,
+        middle
     };
 
     class window_t
@@ -47,13 +55,16 @@ namespace bpmap
         error_t get_status() const { return error; }
         void poll_events();
 
-       const char_t** get_required_extensions(uint32_t&) const;
-       bool queue_supports_presentation(VkInstance, VkPhysicalDevice, uint32_t) const;
+        const char_t** get_required_extensions(uint32_t&) const;
+        bool queue_supports_presentation(VkInstance, VkPhysicalDevice, uint32_t) const;
 
-       error_t create_surface(VkInstance instance, VkSurfaceKHR& surface);
+        error_t create_surface(VkInstance instance, VkSurfaceKHR& surface);
 
-       uint32_t get_height(){ return parameters.height; }
-       uint32_t get_width(){ return parameters.width; }
+        uint32_t get_height() const { return parameters.height; }
+        uint32_t get_width() const { return parameters.width; }
+
+        bool_t mouse_button_pressed(mouse_button_t button) const;
+        pair_t<int_t, int_t> get_mouse_pos() const;
     };
 
 }

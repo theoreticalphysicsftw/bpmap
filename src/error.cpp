@@ -47,6 +47,15 @@ namespace bpmap
 
             case error_t::swapchain_creation_fail:
                 return "Failed to create window swapchain!";
+
+            case error_t::allocator_creation_fail:
+                return "Failed to create device memory allocator!";
+
+            case error_t::buffer_creation_fail:
+                return "Failed to create buffer!";
+
+            case error_t::image_creation_fail:
+                return "Failed to create image!";
         }
     }
 }

@@ -21,7 +21,9 @@
 
 #include <common.hpp>
 #include <error.hpp>
+
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 #include "../window/window.hpp"
 
@@ -32,10 +34,15 @@ namespace bpmap
     static constexpr uint32_t copy_queue = 2;
     static constexpr uint32_t number_of_queues = 3;
 
+    class vk_buffer_t;
+    class vk_image_t;
+
     class vulkan_t
     {
         VkInstance instance;
         VkDevice device;
+
+        VmaAllocator allocator;
 
         VkSurfaceKHR surface;
         VkSwapchainKHR swapchain;
@@ -47,6 +54,7 @@ namespace bpmap
         array_t<VkQueue,number_of_queues> queues;
         array_t<VkCommandPool, number_of_queues> command_pools;
 
+        VkPhysicalDevice gpu_device;
         uint32_t graphics_queue_index;
         uint32_t compute_queue_index;
         uint32_t copy_queue_index;
@@ -85,6 +93,7 @@ namespace bpmap
         error_t create_command_pools();
         error_t create_surface_and_swapchain();
         error_t get_swapchain_images();
+        error_t create_allocator();
 
     public:
 
@@ -92,7 +101,47 @@ namespace bpmap
 
         error_t init(window_t&);
 
+        error_t create_buffer(
+                               vk_buffer_t& buffer,
+                               const VkBufferCreateInfo& bci,
+                               const VmaAllocationCreateInfo& aci
+                             );
+        error_t create_image(
+                              vk_image_t& image,
+                              const VkImageCreateInfo& ici,
+                              const VmaAllocationCreateInfo& aci
+                            );
+
+        void destroy_image_view(VkImageView image_view) const;
+
         ~vulkan_t();
+    };
+
+
+    class vk_buffer_t
+    {
+        friend class vulkan_t;
+
+        VmaAllocation allocation;
+        VmaAllocator allocator;
+
+    public:
+        VkBuffer buffer;
+
+        ~vk_buffer_t();
+    };
+
+    class vk_image_t
+    {
+        friend class vulkan_t;
+
+        VmaAllocation allocation;
+        VmaAllocator allocator;
+
+    public:
+        VkImage image;
+
+        ~vk_image_t();
     };
 }
 #endif // VULKAN_HPP

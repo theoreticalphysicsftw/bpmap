@@ -21,6 +21,8 @@
 
 #include "window/window.hpp"
 #include "vulkan/vulkan.hpp"
+#include "vulkan/gui_renderer.hpp"
+#include "gui/gui.hpp"
 
 namespace bpmap
 {
@@ -29,6 +31,9 @@ namespace bpmap
     {
         window_t window;
         vulkan_t vulkan;
+
+        gui_t gui;
+        gui_renderer_t gui_renderer;
 
         error_t error;
 

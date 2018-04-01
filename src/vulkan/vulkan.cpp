@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
-
 #include <algorithm>
 
+#define VMA_IMPLEMENTATION
 #include "vulkan.hpp"
 
 namespace bpmap
@@ -47,8 +47,68 @@ namespace bpmap
            error = create_surface_and_swapchain();
        }
 
+       if(error == error_t::success)
+       {
+           error = create_allocator();
+       }
+
        return error;
     }
+
+    error_t vulkan_t::create_buffer(
+                                     vk_buffer_t &buffer,
+                                     const VkBufferCreateInfo &bci,
+                                     const VmaAllocationCreateInfo &aci
+                                    )
+    {
+        if(
+            vmaCreateBuffer(
+                            allocator,
+                            &bci,
+                            &aci,
+                            &buffer.buffer,
+                            &buffer.allocation,
+                            nullptr
+                           )
+           != VK_SUCCESS
+          )
+        {
+            return error_t::buffer_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+
+    error_t vulkan_t::create_image(
+                                    vk_image_t &image,
+                                    const VkImageCreateInfo &ici,
+                                    const VmaAllocationCreateInfo &aci
+                                   )
+    {
+        if(
+            vmaCreateImage(
+                            allocator,
+                            &ici,
+                            &aci,
+                            &image.image,
+                            &image.allocation,
+                            nullptr
+                           )
+           != VK_SUCCESS
+          )
+        {
+            return error_t::image_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    void vulkan_t::destroy_image_view(VkImageView image_view) const
+    {
+        vkDestroyImageView(device, image_view, nullptr);
+    }
+
 
     error_t vulkan_t::create_instance()
     {
@@ -79,6 +139,7 @@ namespace bpmap
             return error_t::instance_creation_fail;
         }
     }
+
 
     error_t vulkan_t::find_gpu(VkPhysicalDevice& gpu)
     {
@@ -123,6 +184,7 @@ namespace bpmap
         return error_t::success;
     }
 
+
     error_t vulkan_t::create_logical_device()
     {
         VkPhysicalDevice gpu;
@@ -131,6 +193,8 @@ namespace bpmap
         {
             return error_t::device_search_fail;
         }
+
+        gpu_device = gpu;
 
         auto select_graphics = [this, gpu](const VkQueueFamilyProperties& properties, size_t index)
         {
@@ -209,6 +273,7 @@ namespace bpmap
         }
     }
 
+
     error_t vulkan_t::get_queues()
     {
         vkGetDeviceQueue(
@@ -247,6 +312,7 @@ namespace bpmap
 
         return error_t::success;
     }
+
 
     error_t vulkan_t::create_command_pools()
     {
@@ -310,6 +376,7 @@ namespace bpmap
         return error_t::success;
     }
 
+
     error_t vulkan_t::create_surface_and_swapchain()
     {
         auto status = window->create_surface(instance, surface);
@@ -353,6 +420,7 @@ namespace bpmap
 
         return get_swapchain_images();
     }
+
 
     error_t vulkan_t::get_swapchain_images()
     {
@@ -399,10 +467,30 @@ namespace bpmap
         return error_t::success;
     }
 
+
+    error_t vulkan_t::create_allocator()
+    {
+        VmaAllocatorCreateInfo aci = {};
+        aci.device = device;
+        aci.flags = 0;
+        aci.pAllocationCallbacks = nullptr;
+        aci.pDeviceMemoryCallbacks = nullptr;
+        aci.pVulkanFunctions = nullptr;
+        aci.pHeapSizeLimit = nullptr;
+        aci.frameInUseCount = 0;
+        aci.preferredLargeHeapBlockSize = 0;
+
+        if(vmaCreateAllocator(&aci, &allocator) != VK_SUCCESS)
+        {
+            return error_t::allocator_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+
     vulkan_t::~vulkan_t()
     {
-        vkDeviceWaitIdle(device);
-
         std::for_each(
                       command_pools.begin(),
                       command_pools.end(),
@@ -417,7 +505,7 @@ namespace bpmap
                       swapchain_image_views.end(),
                       [this](const VkImageView& image_view)
                       {
-                           vkDestroyImageView(device, image_view, nullptr);
+                           destroy_image_view(image_view);
                       }
                      );
 
@@ -426,4 +514,16 @@ namespace bpmap
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
     }
+
+    vk_buffer_t::~vk_buffer_t()
+    {
+        vmaDestroyBuffer(allocator, buffer, allocation);
+    }
+
+    vk_image_t::~vk_image_t()
+    {
+        vmaDestroyImage(allocator, image, allocation);
+    }
+
+
 }

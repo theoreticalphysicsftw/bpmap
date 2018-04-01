@@ -10,6 +10,8 @@ list(APPEND SOURCE_FILES "src/scene/scene.cpp")
 list(APPEND SOURCE_FILES "src/scene/scene_loader.cpp")
 list(APPEND SOURCE_FILES "src/core/io.cpp")
 list(APPEND SOURCE_FILES "src/vulkan/vulkan.cpp")
+list(APPEND SOURCE_FILES "src/vulkan/gui_renderer.cpp")
+list(APPEND SOURCE_FILES "src/gui/gui.cpp")
 list(APPEND SOURCE_FILES "src/error.cpp")
 
 include_directories("src")
