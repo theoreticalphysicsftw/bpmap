@@ -109,6 +109,31 @@ namespace bpmap
         vkDestroyImageView(device, image_view, nullptr);
     }
 
+    error_t vulkan_t::create_image_view(VkImageView &image_view, VkImageViewCreateInfo &ivci) const
+    {
+        if(vkCreateImageView(device, &ivci, nullptr,&image_view) != VK_SUCCESS)
+        {
+            return error_t::image_view_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::create_sampler(VkSampler &sampler, const VkSamplerCreateInfo &sci) const
+    {
+        if(vkCreateSampler(device, &sci, nullptr, &sampler) != VK_SUCCESS)
+        {
+            return error_t::sampler_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    void vulkan_t::destroy_sampler(VkSampler sampler) const
+    {
+        vkDestroySampler(device, sampler, nullptr);
+    }
+
 
     error_t vulkan_t::create_instance()
     {

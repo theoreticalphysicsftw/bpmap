@@ -56,6 +56,15 @@ namespace bpmap
 
             case error_t::image_creation_fail:
                 return "Failed to create image!";
+
+            case error_t::image_view_creation_fail:
+                return "Failed to create image view!";
+
+            case error_t::sampler_creation_fail:
+                return "Failed to create sampler!";
+
+            case error_t::font_texture_setup_fail:
+                return "Failed to setup font texture!";
         }
     }
 }

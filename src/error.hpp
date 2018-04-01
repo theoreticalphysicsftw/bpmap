@@ -19,6 +19,9 @@ namespace bpmap
         allocator_creation_fail,
         buffer_creation_fail,
         image_creation_fail,
+        image_view_creation_fail,
+        sampler_creation_fail,
+        font_texture_setup_fail
     };
 
     string_t get_error_message(error_t e);

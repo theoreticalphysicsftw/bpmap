@@ -113,6 +113,10 @@ namespace bpmap
                             );
 
         void destroy_image_view(VkImageView image_view) const;
+        error_t create_image_view(VkImageView& image_view, VkImageViewCreateInfo& ivci) const;
+
+        error_t create_sampler(VkSampler& sampler, const VkSamplerCreateInfo& sci) const;
+        void destroy_sampler(VkSampler sampler) const ;
 
         ~vulkan_t();
     };
