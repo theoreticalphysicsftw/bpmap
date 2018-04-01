@@ -36,8 +36,13 @@ namespace bpmap
     {
         VkInstance instance;
         VkDevice device;
+
         VkSurfaceKHR surface;
         VkSwapchainKHR swapchain;
+        darray_t<VkImage> swapchain_images;
+        darray_t<VkImageView> swapchain_image_views;
+
+        VkFormat swapchain_image_format;
 
         array_t<VkQueue,number_of_queues> queues;
         array_t<VkCommandPool, number_of_queues> command_pools;
@@ -79,6 +84,7 @@ namespace bpmap
         error_t get_queues();
         error_t create_command_pools();
         error_t create_surface_and_swapchain();
+        error_t get_swapchain_images();
 
     public:
 

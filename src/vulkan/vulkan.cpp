@@ -324,6 +324,7 @@ namespace bpmap
         image_extent.width = window->get_width();
 
         //TODO: Validate presentation mode and image format.
+        swapchain_image_format = VK_FORMAT_R8G8B8A8_UNORM;
 
         VkSwapchainCreateInfoKHR scci = {};
         scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -331,7 +332,7 @@ namespace bpmap
         scci.surface = surface;
         scci.minImageCount = 2;
         scci.flags = 0;
-        scci.imageFormat = VK_FORMAT_R8G8B8A8_UNORM;
+        scci.imageFormat = swapchain_image_format;
         scci.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
         scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         scci.imageExtent = image_extent;
@@ -350,6 +351,51 @@ namespace bpmap
             return error_t::swapchain_creation_fail;
         }
 
+        return get_swapchain_images();
+    }
+
+    error_t vulkan_t::get_swapchain_images()
+    {
+
+        uint32_t image_count;
+
+        vkGetSwapchainImagesKHR(device, swapchain, &image_count, nullptr);
+        swapchain_images.resize(image_count);
+        vkGetSwapchainImagesKHR(device, swapchain, &image_count, swapchain_images.data());
+
+        swapchain_image_views.resize(image_count);
+
+        for(auto i = 0; i < image_count; ++i)
+        {
+            VkImageSubresourceRange isr = {};
+            isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            isr.baseArrayLayer = 0;
+            isr.baseMipLevel = 0;
+            isr.layerCount = 1;
+            isr.levelCount = 1;
+
+            VkComponentMapping cm = {};
+            cm.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            cm.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            cm.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            cm.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+            VkImageViewCreateInfo ivci = {};
+            ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            ivci.pNext = nullptr;
+            ivci.flags = 0;
+            ivci.format = swapchain_image_format;
+            ivci.image = swapchain_images[i];
+            ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            ivci.subresourceRange = isr;
+            ivci.components = cm;
+
+            if(vkCreateImageView(device, &ivci, nullptr, &swapchain_image_views[i]) != VK_SUCCESS)
+            {
+                return error_t::swapchain_creation_fail;
+            }
+        }
+
         return error_t::success;
     }
 
@@ -366,6 +412,17 @@ namespace bpmap
                       }
                      );
 
+        std::for_each(
+                      swapchain_image_views.begin(),
+                      swapchain_image_views.end(),
+                      [this](const VkImageView& image_view)
+                      {
+                           vkDestroyImageView(device, image_view, nullptr);
+                      }
+                     );
+
+        vkDestroySwapchainKHR(device, swapchain, nullptr);
+        vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
     }
