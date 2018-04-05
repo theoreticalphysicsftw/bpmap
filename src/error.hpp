@@ -21,6 +21,8 @@ namespace bpmap
         image_creation_fail,
         image_view_creation_fail,
         sampler_creation_fail,
+        pipeline_creation_fail,
+        render_pass_creation_fail,
         font_texture_setup_fail
     };
 

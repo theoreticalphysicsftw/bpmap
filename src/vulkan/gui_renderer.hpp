@@ -19,6 +19,7 @@
 #ifndef GUI_RENDERER_HPP
 #define GUI_RENDERER_HPP
 
+#include "core/algebra.hpp"
 #include "vulkan.hpp"
 #include "gui/gui.hpp"
 
@@ -26,6 +27,13 @@ namespace bpmap
 {
     class gui_renderer_t
     {
+        VkPipeline pipeline;
+        VkPipelineLayout layout;
+        VkRenderPass render_pass;
+
+        VkShaderModule vertex_shader;
+        VkShaderModule fragment_shader;
+
         vk_image_t font_image;
 
         VkImageView font_view;
@@ -45,8 +53,17 @@ namespace bpmap
         void bind_vulkan(const vulkan_t& vulkan);
 
         error_t init();
+        error_t create_pipeline();
+        error_t create_renderpass();
 
         ~gui_renderer_t();
+    };
+
+    struct gui_vertex_t
+    {
+        point2d_t position;
+        point2d_t uv; // Parametrization coordinates
+        color4d_t color;
     };
 }
 

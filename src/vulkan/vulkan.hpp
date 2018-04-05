@@ -112,11 +112,33 @@ namespace bpmap
                               const VmaAllocationCreateInfo& aci
                             );
 
-        void destroy_image_view(VkImageView image_view) const;
-        error_t create_image_view(VkImageView& image_view, VkImageViewCreateInfo& ivci) const;
+        error_t create_image_view(
+                                   VkImageView& image_view,
+                                   VkImageViewCreateInfo& ivci
+                                 ) const;
+        error_t create_sampler(
+                                VkSampler& sampler,
+                                const VkSamplerCreateInfo& sci
+                              ) const;
 
-        error_t create_sampler(VkSampler& sampler, const VkSamplerCreateInfo& sci) const;
-        void destroy_sampler(VkSampler sampler) const ;
+        void destroy_sampler(VkSampler sampler) const;
+        void destroy_image_view(VkImageView image_view) const;
+
+        error_t create_graphics_pipeline(
+                                          VkPipeline& pipeline,
+                                          const VkGraphicsPipelineCreateInfo& gpci
+                                        ) const;
+
+        error_t create_renederpass(
+                                    VkRenderPass& render_pass,
+                                    const VkRenderPassCreateInfo& rpci
+                                  ) const;
+
+
+        VkFormat get_swapchain_format() const
+        {
+            return swapchain_image_format;
+        }
 
         ~vulkan_t();
     };

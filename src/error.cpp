@@ -65,6 +65,13 @@ namespace bpmap
 
             case error_t::font_texture_setup_fail:
                 return "Failed to setup font texture!";
+
+            case error_t::pipeline_creation_fail:
+                return "Failed to create pipeline!";
+
+
+            case error_t::render_pass_creation_fail:
+                return "Failed to create render pass!";
         }
     }
 }

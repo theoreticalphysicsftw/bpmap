@@ -134,6 +134,39 @@ namespace bpmap
         vkDestroySampler(device, sampler, nullptr);
     }
 
+    error_t vulkan_t::create_graphics_pipeline(
+                                                VkPipeline& pipeline,
+                                                const VkGraphicsPipelineCreateInfo& gpci
+                                              ) const
+    {
+        if(
+            vkCreateGraphicsPipelines(
+                                       device,
+                                       VK_NULL_HANDLE,
+                                       1,
+                                       &gpci,
+                                       nullptr,
+                                       &pipeline
+                                      )
+            != VK_SUCCESS
+          )
+        {
+            return error_t::pipeline_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::create_renederpass(VkRenderPass &render_pass, const VkRenderPassCreateInfo &rpci) const
+    {
+        if(vkCreateRenderPass(device, &rpci, nullptr, &render_pass) != VK_SUCCESS)
+        {
+            return error_t::render_pass_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
 
     error_t vulkan_t::create_instance()
     {

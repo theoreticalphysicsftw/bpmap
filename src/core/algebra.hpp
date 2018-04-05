@@ -96,9 +96,19 @@ namespace bpmap
         }
     };
 
+    using point3d_embedded_t = point_t<float_t, 4>;
+    using direction3d_embedded_t = vector_t<float_t, 4, false>;
+    using codirection3d_embedded_t = vector_t<float_t, 4, true>;
+
     using point3d_t = point_t<float_t, 3>;
     using direction3d_t = vector_t<float_t, 3, false>;
     using codirection3d_t = vector_t<float_t, 3, true>;
+
+    using point2d_t = point_t<float_t, 2>;
+    using direction2d_t = vector_t<float_t, 2, false>;
+    using codirection2d_t = vector_t<float_t, 2, true>;
+
+    using color4d_t = vector_t<uint8_t, 4, false>;
 }
 
 #endif // ALGEBRA_HPP
