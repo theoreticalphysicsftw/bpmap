@@ -16,7 +16,7 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
-
+#include <iostream>
 #define VMA_IMPLEMENTATION
 #include "vulkan.hpp"
 
@@ -46,7 +46,6 @@ namespace bpmap
        {
            error = create_surface_and_swapchain();
        }
-
        if(error == error_t::success)
        {
            error = create_allocator();
@@ -59,7 +58,7 @@ namespace bpmap
                                      vk_buffer_t &buffer,
                                      const VkBufferCreateInfo &bci,
                                      const VmaAllocationCreateInfo &aci
-                                    )
+                                    ) const
     {
         if(
             vmaCreateBuffer(
@@ -84,7 +83,7 @@ namespace bpmap
                                     vk_image_t &image,
                                     const VkImageCreateInfo &ici,
                                     const VmaAllocationCreateInfo &aci
-                                   )
+                                   ) const
     {
         if(
             vmaCreateImage(
@@ -107,6 +106,32 @@ namespace bpmap
     void vulkan_t::destroy_image_view(VkImageView image_view) const
     {
         vkDestroyImageView(device, image_view, nullptr);
+    }
+
+    error_t vulkan_t::create_pipeline_layout(
+                                              VkPipelineLayout& layout,
+                                              const VkPipelineLayoutCreateInfo& plci
+                                            ) const
+    {
+        if(vkCreatePipelineLayout(device, &plci, nullptr,&layout) != VK_SUCCESS)
+        {
+            return error_t::pipeline_layout_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::create_descriptor_set_layout(
+                                                    VkDescriptorSetLayout &layout,
+                                                    const VkDescriptorSetLayoutCreateInfo &dslci
+                                                  ) const
+    {
+        if(vkCreateDescriptorSetLayout(device, &dslci, nullptr, &layout) != VK_SUCCESS)
+        {
+            return error_t::descriptor_set_layout_creation_fail;
+        }
+
+        return error_t::success;
     }
 
     error_t vulkan_t::create_image_view(VkImageView &image_view, VkImageViewCreateInfo &ivci) const
@@ -157,11 +182,44 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::create_renederpass(VkRenderPass &render_pass, const VkRenderPassCreateInfo &rpci) const
+    error_t vulkan_t::create_renederpass(
+                                          VkRenderPass &render_pass,
+                                          const VkRenderPassCreateInfo &rpci
+                                        ) const
     {
         if(vkCreateRenderPass(device, &rpci, nullptr, &render_pass) != VK_SUCCESS)
         {
             return error_t::render_pass_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::create_framebuffer(
+                                          VkFramebuffer &framebuffer,
+                                          VkFramebufferCreateInfo &fbci
+                                        ) const
+    {
+        fbci.height = window->get_height();
+        fbci.width = window->get_width();
+        fbci.attachmentCount = swapchain_image_views.size();
+        fbci.pAttachments = swapchain_image_views.data();
+
+        if(vkCreateFramebuffer(device, &fbci, nullptr, &framebuffer) != VK_SUCCESS)
+        {
+            return error_t::framebuffer_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::create_shader( VkShaderModule& shader,
+                           const VkShaderModuleCreateInfo& smci
+                         ) const
+    {
+        if(vkCreateShaderModule(device, &smci, nullptr, &shader) != VK_SUCCESS)
+        {
+            return error_t::shader_creation_fail;
         }
 
         return error_t::success;
@@ -179,13 +237,23 @@ namespace bpmap
         appinfo.pEngineName = app_name;
         appinfo.pNext = nullptr;
 
+#if defined(BPMAP_DEBUG)
+        uint32_t validation_layers_count = 1;
+        const char_t* validation_layers[1] = {"VK_LAYER_LUNARG_standard_validation"};
+#else
+        uint32_t validation_layers_count = 0;
+        const char_t* const* validation_layers = nullptr;
+#endif
+        auto extensions = window->get_required_extensions();
+
         VkInstanceCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         info.pApplicationInfo = &appinfo;
         info.pNext = nullptr;
-        info.enabledLayerCount = 0;
-        info.ppEnabledLayerNames = nullptr;
-        info.ppEnabledExtensionNames = window->get_required_extensions(info.enabledExtensionCount);
+        info.enabledLayerCount = validation_layers_count;
+        info.ppEnabledLayerNames = validation_layers;
+        info.enabledExtensionCount = extensions.size();
+        info.ppEnabledExtensionNames = extensions.data();
         info.flags = 0;
 
         if(vkCreateInstance(&info, nullptr, &instance) == VK_SUCCESS)
@@ -194,6 +262,8 @@ namespace bpmap
         }
         else
         {
+                        std::cerr<<vkCreateInstance(&info, nullptr, &instance)<<std::endl;
+                        std::cerr<<VK_KHR_SWAPCHAIN_EXTENSION_NAME<<std::endl;
             return error_t::instance_creation_fail;
         }
     }
@@ -214,12 +284,12 @@ namespace bpmap
             VkPhysicalDeviceProperties properties;
             vkGetPhysicalDeviceProperties(physical_device, &properties);
 
-            if(properties.vendorID == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            if(properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             {
                 gpus.push_back(std::make_pair(physical_device,0));
             }
 
-            if(properties.vendorID == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+            if(properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
             {
                 gpus.push_back(std::make_pair(physical_device,1));
             }
@@ -254,60 +324,31 @@ namespace bpmap
 
         gpu_device = gpu;
 
-        auto select_graphics = [this, gpu](const VkQueueFamilyProperties& properties, size_t index)
+        auto select_queue = [this, gpu](const VkQueueFamilyProperties& properties, size_t index)
         {
-            return window->queue_supports_presentation(instance, gpu, index)
-                   && properties.queueFlags == VK_QUEUE_GRAPHICS_BIT;
+            return window->queue_supports_presentation(instance, gpu_device, index)
+                   && properties.queueFlags & VK_QUEUE_GRAPHICS_BIT
+                   && properties.queueFlags & VK_QUEUE_COMPUTE_BIT
+                   && properties.queueFlags & VK_QUEUE_TRANSFER_BIT;
         };
 
-        auto select_compute = [](const VkQueueFamilyProperties& properties, size_t index)
-        {
-            return properties.queueCount == VK_QUEUE_COMPUTE_BIT;
-        };
 
-        auto select_copy = [](const VkQueueFamilyProperties& properties, size_t index)
+        if(find_queue(gpu, queue_index, select_queue) != error_t::success)
         {
-            return properties.queueCount == VK_QUEUE_TRANSFER_BIT;
-        };
-
-        if(find_queue(gpu, graphics_queue_index, select_graphics) != error_t::success)
-        {
-            return error_t::device_search_fail;
+            return error_t::queue_search_fail;
         }
 
-        if(find_queue(gpu, compute_queue_index, select_compute) != error_t::success)
-        {
-            return error_t::device_search_fail;
-        }
+        float_t priority = 1.0;
 
-        if(find_queue(gpu, copy_queue_index, select_copy) != error_t::success)
-        {
-            return error_t::device_search_fail;
-        }
+        VkDeviceQueueCreateInfo dqci;
+        dqci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        dqci.flags = 0;
+        dqci.pNext = nullptr;
+        dqci.pQueuePriorities = &priority;
+        dqci.queueFamilyIndex = queue_index;
+        dqci.queueCount = 1;
 
-        VkDeviceQueueCreateInfo dqci[3] = {};
-
-        dqci[graphics_queue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        dqci[graphics_queue].flags = 0;
-        dqci[graphics_queue].pNext = nullptr;
-        dqci[graphics_queue].pQueuePriorities = nullptr;
-        dqci[graphics_queue].queueFamilyIndex = graphics_queue_index;
-        dqci[graphics_queue].queueCount = 1;
-
-        dqci[compute_queue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        dqci[compute_queue].flags = 0;
-        dqci[compute_queue].pNext = nullptr;
-        dqci[compute_queue].pQueuePriorities = nullptr;
-        dqci[compute_queue].queueFamilyIndex = compute_queue_index;
-        dqci[compute_queue].queueCount = 1;
-
-        dqci[copy_queue].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        dqci[copy_queue].flags = 0;
-        dqci[copy_queue].pNext = nullptr;
-        dqci[copy_queue].pQueuePriorities = nullptr;
-        dqci[copy_queue].queueFamilyIndex = copy_queue_index;
-        dqci[copy_queue].queueCount = 1;
-
+        std::vector<const char*> extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
         VkDeviceCreateInfo dci = {};
         dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -315,10 +356,10 @@ namespace bpmap
         dci.pNext = nullptr;
         dci.enabledLayerCount = 0;
         dci.ppEnabledLayerNames = nullptr;
-        dci.enabledExtensionCount = 0;
-        dci.ppEnabledExtensionNames = nullptr;
-        dci.queueCreateInfoCount = 3;
-        dci.pQueueCreateInfos = dqci;
+        dci.enabledExtensionCount = extensions.size();
+        dci.ppEnabledExtensionNames = extensions.data();
+        dci.queueCreateInfoCount = 1;
+        dci.pQueueCreateInfos = &dqci;
         dci.pEnabledFeatures = nullptr;
 
         if (vkCreateDevice(gpu, &dci, nullptr, &device) == VK_SUCCESS)
@@ -336,34 +377,12 @@ namespace bpmap
     {
         vkGetDeviceQueue(
                           device,
-                          compute_queue_index,
-                          compute_queue,
-                          &queues[compute_queue]
+                          queue_index,
+                          0,
+                          &queue
                          );
 
-        vkGetDeviceQueue(
-                          device,
-                          graphics_queue_index,
-                          graphics_queue,
-                          &queues[graphics_queue]
-                        );
-
-        vkGetDeviceQueue(
-                          device,
-                          copy_queue_index,
-                          copy_queue,
-                          &queues[copy_queue]
-                        );
-
-        if(std::any_of(
-                        queues.begin(),
-                        queues.end(),
-                        [](const VkQueue& q)
-                        {
-                            return q == VK_NULL_HANDLE;
-                        }
-                        )
-           )
+        if(queue = VK_NULL_HANDLE)
         {
             return error_t::get_queue_fail;
         }
@@ -374,61 +393,30 @@ namespace bpmap
 
     error_t vulkan_t::create_command_pools()
     {
+        compute_pool = 0;
+        graphics_pool = 1;
+        transfer_pool = 2;
+
         VkCommandPoolCreateInfo compute_cpci = {};
         compute_cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        compute_cpci.queueFamilyIndex = compute_queue_index;
+        compute_cpci.queueFamilyIndex = queue_index;
         compute_cpci.flags = 0;
         compute_cpci.pNext = nullptr;
 
-        VkCommandPoolCreateInfo graphics_cpci = {};
-        graphics_cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        graphics_cpci.queueFamilyIndex = graphics_queue_index;
-        graphics_cpci.flags = 0;
-        graphics_cpci.pNext = nullptr;
-
-        VkCommandPoolCreateInfo copy_cpci = {};
-        copy_cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        copy_cpci.queueFamilyIndex = copy_queue_index;
-        copy_cpci.flags = 0;
-        copy_cpci.pNext = nullptr;
-
-        if(
-           vkCreateCommandPool(
-                               device,
-                               &compute_cpci,
-                               nullptr,
-                               &command_pools[compute_queue]
-                              )
-           != VK_SUCCESS
-          )
+        for(auto & pool: command_pools)
         {
-            return error_t::command_pool_creation_fail;
-        }
-
-        if(
-           vkCreateCommandPool(
-                               device,
-                               &graphics_cpci,
-                               nullptr,
-                               &command_pools[graphics_queue]
-                              )
-           != VK_SUCCESS
-          )
-        {
-            return error_t::command_pool_creation_fail;
-        }
-
-        if(
-           vkCreateCommandPool(
-                               device,
-                               &copy_cpci,
-                               nullptr,
-                               &command_pools[copy_queue]
-                              )
-           != VK_SUCCESS
-          )
-        {
-            return error_t::command_pool_creation_fail;
+            if(
+               vkCreateCommandPool(
+                                   device,
+                                   &compute_cpci,
+                                   nullptr,
+                                   &pool
+                                  )
+               != VK_SUCCESS
+              )
+            {
+                return error_t::command_pool_creation_fail;
+            }
         }
 
         return error_t::success;
@@ -530,6 +518,7 @@ namespace bpmap
     {
         VmaAllocatorCreateInfo aci = {};
         aci.device = device;
+        aci.physicalDevice = gpu_device;
         aci.flags = 0;
         aci.pAllocationCallbacks = nullptr;
         aci.pDeviceMemoryCallbacks = nullptr;

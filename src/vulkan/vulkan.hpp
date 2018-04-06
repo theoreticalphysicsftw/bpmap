@@ -51,13 +51,15 @@ namespace bpmap
 
         VkFormat swapchain_image_format;
 
-        array_t<VkQueue,number_of_queues> queues;
-        array_t<VkCommandPool, number_of_queues> command_pools;
+        VkQueue queue;
+        array_t<VkCommandPool, 3> command_pools;
+        uint32_t compute_pool;
+        uint32_t transfer_pool;
+        uint32_t graphics_pool;
 
         VkPhysicalDevice gpu_device;
-        uint32_t graphics_queue_index;
-        uint32_t compute_queue_index;
-        uint32_t copy_queue_index;
+        uint32_t queue_index;
+
 
         window_t* window;
 
@@ -105,12 +107,12 @@ namespace bpmap
                                vk_buffer_t& buffer,
                                const VkBufferCreateInfo& bci,
                                const VmaAllocationCreateInfo& aci
-                             );
+                             ) const;
         error_t create_image(
                               vk_image_t& image,
                               const VkImageCreateInfo& ici,
                               const VmaAllocationCreateInfo& aci
-                            );
+                            ) const;
 
         error_t create_image_view(
                                    VkImageView& image_view,
@@ -124,6 +126,16 @@ namespace bpmap
         void destroy_sampler(VkSampler sampler) const;
         void destroy_image_view(VkImageView image_view) const;
 
+        error_t create_pipeline_layout(
+                                        VkPipelineLayout& layout,
+                                        const VkPipelineLayoutCreateInfo& plci
+                                      ) const;
+
+        error_t create_descriptor_set_layout(
+                                              VkDescriptorSetLayout& layout,
+                                              const VkDescriptorSetLayoutCreateInfo& dslci
+                                            ) const;
+
         error_t create_graphics_pipeline(
                                           VkPipeline& pipeline,
                                           const VkGraphicsPipelineCreateInfo& gpci
@@ -134,6 +146,16 @@ namespace bpmap
                                     const VkRenderPassCreateInfo& rpci
                                   ) const;
 
+
+        error_t create_framebuffer(
+                                    VkFramebuffer& framebuffer,
+                                    VkFramebufferCreateInfo& fbci
+                                   ) const ;
+
+
+        error_t create_shader( VkShaderModule& shader,
+                               const VkShaderModuleCreateInfo& smci
+                             ) const;
 
         VkFormat get_swapchain_format() const
         {

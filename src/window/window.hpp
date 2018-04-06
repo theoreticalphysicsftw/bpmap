@@ -55,7 +55,7 @@ namespace bpmap
         error_t get_status() const { return error; }
         void poll_events();
 
-        const char_t** get_required_extensions(uint32_t&) const;
+        darray_t<const char_t*> get_required_extensions() const;
         bool queue_supports_presentation(VkInstance, VkPhysicalDevice, uint32_t) const;
 
         error_t create_surface(VkInstance instance, VkSurfaceKHR& surface);

@@ -24,7 +24,7 @@
 
 namespace bpmap
 {
-    bool read_whole_file(const string_t& path, darray_t<uint8_t> data);
+    bool read_whole_file(const string_t& path, darray_t<uint8_t>& data);
 }
 
 #endif // IO_HPP

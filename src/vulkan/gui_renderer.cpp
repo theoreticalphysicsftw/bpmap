@@ -23,6 +23,41 @@ namespace bpmap
 {
     error_t gui_renderer_t::setup_font_texture()
     {
+        // TODO use real size;
+        VkExtent3D extent = {};
+        extent.height = 1000;
+        extent.width = 2000;
+        extent.depth = 1;
+
+        VkImageCreateInfo ici = {};
+        ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        ici.pNext = nullptr;
+        ici.flags = 0;
+        ici.imageType = VK_IMAGE_TYPE_2D;
+        ici.arrayLayers = 1;
+        ici.mipLevels = 1;
+        ici.samples = VK_SAMPLE_COUNT_1_BIT;
+        ici.format = VK_FORMAT_R8G8B8A8_UNORM;
+        ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        ici.pQueueFamilyIndices = nullptr;
+        ici.queueFamilyIndexCount = 0;
+        ici.extent = extent;
+
+        VmaAllocationCreateInfo aci = {};
+        aci.pool = VK_NULL_HANDLE;
+        aci.flags = 0;
+        aci.preferredFlags = 0;
+        aci.requiredFlags = 0;
+        aci.pUserData = nullptr;
+        aci.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        if(vulkan->create_image(font_image, ici,aci) != error_t::success)
+        {
+            return error_t::font_texture_setup_fail;
+        }
 
         VkImageSubresourceRange isr = {};
         isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -38,6 +73,7 @@ namespace bpmap
         ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
         ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ivci.subresourceRange = isr;
+        ivci.image = font_image.image;
 
         if(vulkan->create_image_view(font_view,ivci) != error_t::success)
         {
@@ -65,22 +101,45 @@ namespace bpmap
     }
 
 
-    void gui_renderer_t::bind_gui(const gui_t &g)
+    error_t gui_renderer_t::create_descriptor_sets_layout()
     {
-        gui = &g;
+        VkDescriptorSetLayoutBinding dslb[2] = {};
+
+        dslb[0].binding = 0;
+        dslb[0].descriptorCount = 1;
+        dslb[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dslb[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        dslb[1].binding = 1;
+        dslb[1].descriptorCount = 1;
+        dslb[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        dslb[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        VkDescriptorSetLayoutCreateInfo dslci = {};
+        dslci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        dslci.pNext = nullptr;
+        dslci.flags = 0;
+        dslci.bindingCount = 2;
+        dslci.pBindings = dslb;
+
+        return vulkan->create_descriptor_set_layout(descriptor_set_layout, dslci);
     }
 
-    void gui_renderer_t::bind_vulkan(const vulkan_t &vk)
+
+    error_t gui_renderer_t::create_pipeline_layout()
     {
-        vulkan = &vk;
+        VkPipelineLayoutCreateInfo plci = {};
+        plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        plci.pNext = nullptr;
+        plci.flags = 0;
+        plci.pushConstantRangeCount = 0;
+        plci.pPushConstantRanges = nullptr;
+        plci.setLayoutCount = 1;
+        plci.pSetLayouts = &descriptor_set_layout;
+
+        return vulkan->create_pipeline_layout(pipeline_layout, plci);
     }
 
-    error_t gui_renderer_t::init()
-    {
-        setup_font_texture();
-
-        return error_t::success;
-    }
 
     error_t gui_renderer_t::create_pipeline()
     {
@@ -216,10 +275,11 @@ namespace bpmap
         gpci.pDynamicState = &pdsci;
         gpci.renderPass = render_pass;
         gpci.subpass = 0;
-        gpci.layout = layout;
+        gpci.layout = pipeline_layout;
 
         return vulkan->create_graphics_pipeline(pipeline, gpci);
     }
+
 
     error_t gui_renderer_t::create_renderpass()
     {
@@ -263,6 +323,126 @@ namespace bpmap
 
         return vulkan->create_renederpass(render_pass, rpci);
     }
+
+
+    error_t gui_renderer_t::create_framebuffer()
+    {
+        VkFramebufferCreateInfo fbci = {};
+        fbci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        fbci.pNext = nullptr;
+        fbci.flags = 0;
+        fbci.renderPass = render_pass;
+
+        return vulkan->create_framebuffer(framebuffer, fbci);
+    }
+
+
+    error_t gui_renderer_t::create_shaders()
+    {
+        std::vector<uint8_t> vertex_shader_data;
+        std::vector<uint8_t> fragment_shader_data;
+
+        if(!read_whole_file(vertex_shader_path, vertex_shader_data))
+        {
+            return error_t::vertex_shader_read_fail;
+        }
+
+        if(!read_whole_file(fragment_shader_path, fragment_shader_data))
+        {
+            return error_t::fragment_shader_read_fail;
+        }
+
+        VkShaderModuleCreateInfo vertex_smci = {};
+        vertex_smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        vertex_smci.pNext = nullptr;
+        vertex_smci.flags = 0;
+        vertex_smci.codeSize = vertex_shader_data.size();
+        vertex_smci.pCode = (uint32_t*) vertex_shader_data.data();
+
+        VkShaderModuleCreateInfo fragment_smci = {};
+        fragment_smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        fragment_smci.pNext = nullptr;
+        fragment_smci.flags = 0;
+        fragment_smci.codeSize = fragment_shader_data.size();
+        fragment_smci.pCode = (uint32_t*) fragment_shader_data.data();
+
+        auto status = vulkan->create_shader(vertex_shader, vertex_smci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return vulkan->create_shader(fragment_shader, fragment_smci);
+    }
+
+
+    void gui_renderer_t::bind_gui(const gui_t &g)
+    {
+        gui = &g;
+    }
+
+
+    void gui_renderer_t::bind_vulkan(const vulkan_t &vk)
+    {
+        vulkan = &vk;
+    }
+
+
+    error_t gui_renderer_t::init()
+    {
+        auto status = setup_font_texture();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_shaders();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_renderpass();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_descriptor_sets_layout();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_pipeline_layout();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_pipeline();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_framebuffer();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return error_t::success;
+    }
+
 
     gui_renderer_t::~gui_renderer_t()
     {

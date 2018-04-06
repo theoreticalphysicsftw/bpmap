@@ -55,9 +55,12 @@ namespace bpmap
         glfwPollEvents();
     }
 
-    const char_t** window_t::get_required_extensions(uint32_t& count) const
+    darray_t<const char_t*> window_t::get_required_extensions() const
     {
-        return glfwGetRequiredInstanceExtensions(&count);
+        uint32_t count;
+        auto extensions = glfwGetRequiredInstanceExtensions(&count);
+
+        return darray_t<const char_t*>(extensions, extensions + count);
     }
 
     bool window_t::queue_supports_presentation(

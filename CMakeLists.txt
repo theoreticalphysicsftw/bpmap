@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 2.8)
 
+project(bpmap)
+
+if((DEFINED CMAKE_BUILD_TYPE))
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+        add_definitions(-DBPMAP_DEBUG)
+    endif()
+endif()
+
 set(RELEASE_OPTIONS "-O3" "-fno-exceptions" "-std=c++17")
 set(DEBUG_OPTIONS "-std=c++17")
 
@@ -27,7 +35,11 @@ set(GLFW_VULKAN_STATIC "NO")
 add_subdirectory("third_party/glfw3")
 link_directories("third_party/glfw3")
 
-project(bpmap)
+
+execute_process(COMMAND "glslangValidator" "-V" "-o" "${PROJECT_BINARY_DIR}/gui.vert.spv" "gui.vert" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/gpu" OUTPUT_VARIABLE ov0)
+execute_process(COMMAND "glslangValidator" "-V" "-o" "${PROJECT_BINARY_DIR}/gui.frag.spv" "gui.frag" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/gpu" OUTPUT_VARIABLE ov1)
+message("${ov0}")
+message("${ov1}")
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEFAULT>:${RELEASE_OPTIONS}>")
@@ -35,4 +47,5 @@ target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_OPTIONS
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_OPTIONS}>")
 target_link_libraries(${PROJECT_NAME} "glfw")
 target_link_libraries(${PROJECT_NAME} "vulkan")
+
 

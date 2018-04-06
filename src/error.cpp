@@ -66,12 +66,41 @@ namespace bpmap
             case error_t::font_texture_setup_fail:
                 return "Failed to setup font texture!";
 
+            case error_t::pipeline_layout_creation_fail:
+                return "Failed to create pipeline layout!";
+
+            case error_t::descriptor_set_layout_creation_fail:
+                return "Failed to create descriptor set layout!";
+
             case error_t::pipeline_creation_fail:
                 return "Failed to create pipeline!";
 
-
             case error_t::render_pass_creation_fail:
                 return "Failed to create render pass!";
+
+            case error_t::framebuffer_creation_fail:
+                return "Failed to create framebuffer!";
+
+            case error_t::shader_creation_fail:
+                return "Failed to create shader!";
+
+            case error_t::vertex_shader_read_fail:
+                return "Failed to read vertex shader!";
+
+            case error_t::fragment_shader_read_fail:
+                return "Failed to read fragment shader!";
+
+            case error_t::graphics_queue_search_fail:
+                return "Failed to find graphics queue!";
+
+            case error_t::compute_queue_search_fail:
+                return "Failed to find compute queue!";
+
+            case error_t::queue_search_fail:
+                return "Failed to find compute queue!";
+
+            case error_t::copy_queue_search_fail:
+                return "Failed to find copy queue!";
         }
     }
 }

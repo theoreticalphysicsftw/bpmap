@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <array>
 #include <variant>
 #include <utility>
@@ -55,6 +56,9 @@ namespace bpmap
 
     template <typename T, typename U>
     using pair_t = std::pair<T,U>;
+
+    template<typename K, typename V>
+    using hash_table_t = std::unordered_map<K,V>;
 
     constexpr const char_t* app_name = "bpmap";
 }

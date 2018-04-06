@@ -27,14 +27,19 @@ namespace bpmap
     {
         error = window.init({1024,720, app_name});
 
-        if(error != error_t::success)
+        if(error == error_t::success)
         {
             error = vulkan.init(window);
+            gui.bind_window(window);
+            gui_renderer.bind_gui(gui);
+            gui_renderer.bind_vulkan(vulkan);
+
+            if(error == error_t::success)
+            {
+                 error = gui_renderer.init();
+            }
         }
 
-        gui.bind_window(window);
-        gui_renderer.bind_gui(gui);
-        gui_renderer.bind_vulkan(vulkan);
     }
 
     void application_t::loop()

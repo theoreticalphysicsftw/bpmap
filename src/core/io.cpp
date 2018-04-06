@@ -33,7 +33,7 @@ namespace bpmap
         return size;
     }
 
-    bool read_whole_file(const string_t& path, darray_t<uint8_t> data)
+    bool read_whole_file(const string_t& path, darray_t<uint8_t>& data)
     {
         auto handle = fopen(path.c_str(),"rb");
 
@@ -46,7 +46,7 @@ namespace bpmap
 
         data.resize(size);
 
-        if(fread(data.data(), size, 1, handle) < size)
+        if(fread(data.data(), size, 1, handle) < 1)
         {
             return false;
         }

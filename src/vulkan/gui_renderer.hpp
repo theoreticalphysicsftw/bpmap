@@ -20,6 +20,7 @@
 #define GUI_RENDERER_HPP
 
 #include "core/algebra.hpp"
+#include "core/io.hpp"
 #include "vulkan.hpp"
 #include "gui/gui.hpp"
 
@@ -28,8 +29,10 @@ namespace bpmap
     class gui_renderer_t
     {
         VkPipeline pipeline;
-        VkPipelineLayout layout;
+        VkDescriptorSetLayout descriptor_set_layout;
+        VkPipelineLayout pipeline_layout;
         VkRenderPass render_pass;
+        VkFramebuffer framebuffer;
 
         VkShaderModule vertex_shader;
         VkShaderModule fragment_shader;
@@ -46,15 +49,21 @@ namespace bpmap
         const vulkan_t* vulkan;
 
         error_t setup_font_texture();
+        error_t create_descriptor_sets_layout();
+        error_t create_pipeline_layout();
+        error_t create_pipeline();
+        error_t create_renderpass();
+        error_t create_framebuffer();
+        error_t create_shaders();
 
     public:
+        static constexpr const char_t* vertex_shader_path = "gui.vert.spv";
+        static constexpr const char_t* fragment_shader_path = "gui.frag.spv";
 
         void bind_gui(const gui_t& gui);
         void bind_vulkan(const vulkan_t& vulkan);
 
         error_t init();
-        error_t create_pipeline();
-        error_t create_renderpass();
 
         ~gui_renderer_t();
     };
