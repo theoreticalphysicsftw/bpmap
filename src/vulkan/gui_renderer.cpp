@@ -23,10 +23,9 @@ namespace bpmap
 {
     error_t gui_renderer_t::setup_font_texture()
     {
-        // TODO use real size;
         VkExtent3D extent = {};
-        extent.height = 1000;
-        extent.width = 2000;
+        extent.height = gui->get_font_height();
+        extent.width = gui->get_font_width();
         extent.depth = 1;
 
         VkImageCreateInfo ici = {};
@@ -166,6 +165,7 @@ namespace bpmap
         prsci.depthClampEnable = VK_FALSE;
         prsci.depthBiasEnable = VK_FALSE;
         prsci.rasterizerDiscardEnable = VK_FALSE;
+        prsci.lineWidth = 1.0;
         prsci.cullMode = VK_CULL_MODE_BACK_BIT;
         prsci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         prsci.polygonMode = VK_POLYGON_MODE_FILL;
@@ -195,7 +195,7 @@ namespace bpmap
         viad[2].binding = 0;
         viad[2].location = 2;
         viad[2].offset = offsetof(gui_vertex_t, color);
-        viad[2].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        viad[2].format = VK_FORMAT_R8G8B8A8_UINT;
 
         VkPipelineVertexInputStateCreateInfo pvisci = {};
         pvisci.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -235,6 +235,7 @@ namespace bpmap
         pcbas.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         pcbas.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
         pcbas.colorBlendOp = VK_BLEND_OP_ADD;
+        pcbas.alphaBlendOp = VK_BLEND_OP_ADD;
         pcbas.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
                                VK_COLOR_COMPONENT_B_BIT |
                                VK_COLOR_COMPONENT_G_BIT |
@@ -333,7 +334,7 @@ namespace bpmap
         fbci.flags = 0;
         fbci.renderPass = render_pass;
 
-        return vulkan->create_framebuffer(framebuffer, fbci);
+        return vulkan->create_framebuffers(framebuffers, fbci);
     }
 
 

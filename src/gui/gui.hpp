@@ -51,6 +51,9 @@ namespace bpmap
     public:
         gui_t();
         void bind_window(window_t& window);
+
+        int32_t get_font_height() const {return font_height;}
+        int32_t get_font_width() const {return font_width;}
     };
 }
 #endif // GUI_HPP

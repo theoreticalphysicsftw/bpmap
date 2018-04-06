@@ -19,6 +19,7 @@ namespace bpmap
         get_queue_fail,
         command_pool_creation_fail,
         surface_creation_fail,
+        surface_validation_fail,
         swapchain_creation_fail,
         allocator_creation_fail,
         buffer_creation_fail,

@@ -32,7 +32,7 @@ namespace bpmap
         VkDescriptorSetLayout descriptor_set_layout;
         VkPipelineLayout pipeline_layout;
         VkRenderPass render_pass;
-        VkFramebuffer framebuffer;
+        darray_t<VkFramebuffer> framebuffers;
 
         VkShaderModule vertex_shader;
         VkShaderModule fragment_shader;

@@ -48,8 +48,9 @@ namespace bpmap
         VkSwapchainKHR swapchain;
         darray_t<VkImage> swapchain_images;
         darray_t<VkImageView> swapchain_image_views;
-
         VkFormat swapchain_image_format;
+        VkColorSpaceKHR swapchain_color_space;
+        VkPresentModeKHR swapchain_present_mode;
 
         VkQueue queue;
         array_t<VkCommandPool, 3> command_pools;
@@ -93,6 +94,9 @@ namespace bpmap
         error_t create_logical_device();
         error_t get_queues();
         error_t create_command_pools();
+        error_t validate_surface_support();
+        error_t pick_surface_format();
+        error_t pick_present_mode();
         error_t create_surface_and_swapchain();
         error_t get_swapchain_images();
         error_t create_allocator();
@@ -147,9 +151,9 @@ namespace bpmap
                                   ) const;
 
 
-        error_t create_framebuffer(
-                                    VkFramebuffer& framebuffer,
-                                    VkFramebufferCreateInfo& fbci
+        error_t create_framebuffers(
+                                     darray_t<VkFramebuffer>& framebuffers,
+                                     VkFramebufferCreateInfo& fbci
                                    ) const ;
 
 

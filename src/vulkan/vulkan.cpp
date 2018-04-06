@@ -16,7 +16,7 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
-#include <iostream>
+
 #define VMA_IMPLEMENTATION
 #include "vulkan.hpp"
 
@@ -195,19 +195,26 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::create_framebuffer(
-                                          VkFramebuffer &framebuffer,
-                                          VkFramebufferCreateInfo &fbci
-                                        ) const
+    error_t vulkan_t::create_framebuffers(
+                                           darray_t<VkFramebuffer>& framebuffers,
+                                           VkFramebufferCreateInfo &fbci
+                                         ) const
     {
         fbci.height = window->get_height();
         fbci.width = window->get_width();
-        fbci.attachmentCount = swapchain_image_views.size();
-        fbci.pAttachments = swapchain_image_views.data();
+        fbci.layers = 1;
+        fbci.attachmentCount = 1;
 
-        if(vkCreateFramebuffer(device, &fbci, nullptr, &framebuffer) != VK_SUCCESS)
+        framebuffers.resize(swapchain_image_views.size());
+
+        for(auto i = 0u; i < swapchain_image_views.size(); ++i)
         {
-            return error_t::framebuffer_creation_fail;
+            fbci.pAttachments = &swapchain_image_views[i];
+
+            if(vkCreateFramebuffer(device, &fbci, nullptr, &framebuffers[i]) != VK_SUCCESS)
+            {
+                return error_t::framebuffer_creation_fail;
+            }
         }
 
         return error_t::success;
@@ -262,8 +269,6 @@ namespace bpmap
         }
         else
         {
-                        std::cerr<<vkCreateInstance(&info, nullptr, &instance)<<std::endl;
-                        std::cerr<<VK_KHR_SWAPCHAIN_EXTENSION_NAME<<std::endl;
             return error_t::instance_creation_fail;
         }
     }
@@ -422,6 +427,82 @@ namespace bpmap
         return error_t::success;
     }
 
+    error_t vulkan_t::validate_surface_support()
+    {
+        VkBool32 supported;
+
+        if(vkGetPhysicalDeviceSurfaceSupportKHR(gpu_device, queue_index, surface, &supported) != VK_SUCCESS)
+        {
+            return error_t::surface_validation_fail;
+        }
+
+        if(!supported)
+        {
+            return error_t::surface_validation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::pick_surface_format()
+    {
+        std::vector<VkSurfaceFormatKHR> formats;
+        uint32_t count;
+
+        vkGetPhysicalDeviceSurfaceFormatsKHR(gpu_device, surface, &count, nullptr);
+        formats.resize(count);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(gpu_device, surface, &count, formats.data());
+
+        if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
+        {
+            swapchain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
+            swapchain_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+
+            return error_t::success;
+        }
+
+        for(auto format: formats)
+        {
+            if(
+                format.format == VK_FORMAT_B8G8R8A8_UNORM &&
+                format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
+              )
+            {
+                swapchain_image_format = VK_FORMAT_B8G8R8A8_UNORM;
+                swapchain_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+
+                return error_t::success;
+            }
+        }
+
+        swapchain_image_format = formats[0].format;
+        swapchain_color_space = formats[0].colorSpace;
+    }
+
+    error_t vulkan_t::pick_present_mode()
+    {
+        std::vector<VkPresentModeKHR> modes;
+        uint32_t count;
+
+        vkGetPhysicalDeviceSurfacePresentModesKHR(gpu_device, surface, &count, nullptr);
+        modes.resize(count);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(gpu_device, surface, &count, modes.data());
+
+        for(auto present_mode: modes)
+        {
+            if(present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
+            {
+                swapchain_present_mode = present_mode;
+
+                return error_t::success;
+            }
+        }
+
+        swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+
+        return error_t::success;
+    }
+
 
     error_t vulkan_t::create_surface_and_swapchain()
     {
@@ -432,12 +513,30 @@ namespace bpmap
             return status;
         }
 
+        status = validate_surface_support();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
         VkExtent2D image_extent = {};
         image_extent.height = window->get_height();
         image_extent.width = window->get_width();
 
-        //TODO: Validate presentation mode and image format.
-        swapchain_image_format = VK_FORMAT_R8G8B8A8_UNORM;
+        status = pick_surface_format();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = pick_present_mode();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
 
         VkSwapchainCreateInfoKHR scci = {};
         scci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -446,7 +545,7 @@ namespace bpmap
         scci.minImageCount = 2;
         scci.flags = 0;
         scci.imageFormat = swapchain_image_format;
-        scci.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        scci.imageColorSpace = swapchain_color_space;
         scci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         scci.imageExtent = image_extent;
         scci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -454,7 +553,7 @@ namespace bpmap
         scci.oldSwapchain = VK_NULL_HANDLE;
         scci.queueFamilyIndexCount = 0;
         scci.pQueueFamilyIndices = nullptr;
-        scci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+        scci.presentMode = swapchain_present_mode;
         scci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
         scci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         scci.clipped = VK_TRUE;

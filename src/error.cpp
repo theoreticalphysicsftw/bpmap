@@ -45,6 +45,9 @@ namespace bpmap
             case error_t::surface_creation_fail:
                 return "Failed to create window surface!";
 
+            case error_t::surface_validation_fail:
+                return "Failed to validate window surface support!";
+
             case error_t::swapchain_creation_fail:
                 return "Failed to create window swapchain!";
 
