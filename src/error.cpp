@@ -42,6 +42,9 @@ namespace bpmap
             case error_t::command_pool_creation_fail:
                 return "Failed to create command pool!";
 
+            case error_t::command_buffers_creation_fail:
+                return "Failed to create command buffers!";
+
             case error_t::surface_creation_fail:
                 return "Failed to create window surface!";
 
@@ -102,8 +105,14 @@ namespace bpmap
             case error_t::queue_search_fail:
                 return "Failed to find compute queue!";
 
+            case error_t::queue_submit_fail:
+                return "Failed to submit work to queue!";
+
             case error_t::copy_queue_search_fail:
                 return "Failed to find copy queue!";
+
+            case error_t::memory_mapping_fail:
+                return "Failed to map memory!";
         }
     }
 }

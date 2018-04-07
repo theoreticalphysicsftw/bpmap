@@ -36,6 +36,7 @@ namespace bpmap
 
     class vk_buffer_t;
     class vk_image_t;
+    class vk_command_pool_t;
 
     class vulkan_t
     {
@@ -53,10 +54,6 @@ namespace bpmap
         VkPresentModeKHR swapchain_present_mode;
 
         VkQueue queue;
-        array_t<VkCommandPool, 3> command_pools;
-        uint32_t compute_pool;
-        uint32_t transfer_pool;
-        uint32_t graphics_pool;
 
         VkPhysicalDevice gpu_device;
         uint32_t queue_index;
@@ -93,7 +90,6 @@ namespace bpmap
 
         error_t create_logical_device();
         error_t get_queues();
-        error_t create_command_pools();
         error_t validate_surface_support();
         error_t pick_surface_format();
         error_t pick_present_mode();
@@ -161,6 +157,16 @@ namespace bpmap
                                const VkShaderModuleCreateInfo& smci
                              ) const;
 
+        error_t create_command_pool(vk_command_pool_t& pool) const;
+
+        error_t create_command_buffers(
+                                        VkCommandBuffer* buffers,
+                                        const VkCommandBufferAllocateInfo& cbai
+                                      ) const;
+
+        error_t submit_work(const VkSubmitInfo& submit_info) const;
+        void wait_idle() const;
+
         VkFormat get_swapchain_format() const
         {
             return swapchain_image_format;
@@ -178,10 +184,14 @@ namespace bpmap
         VmaAllocator allocator;
 
     public:
+        error_t map(void** data);
+        void unmap();
+
         VkBuffer buffer;
 
         ~vk_buffer_t();
     };
+
 
     class vk_image_t
     {
@@ -194,6 +204,19 @@ namespace bpmap
         VkImage image;
 
         ~vk_image_t();
+    };
+
+
+    class vk_command_pool_t
+    {
+        friend class vulkan_t;
+
+        VkDevice device;
+
+    public:
+        VkCommandPool pool;
+
+        ~vk_command_pool_t();
     };
 }
 #endif // VULKAN_HPP

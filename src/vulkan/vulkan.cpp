@@ -39,11 +39,6 @@ namespace bpmap
        }
        if(error == error_t::success)
        {
-           error = create_command_pools();
-       }
-
-       if(error == error_t::success)
-       {
            error = create_surface_and_swapchain();
        }
        if(error == error_t::success)
@@ -75,6 +70,8 @@ namespace bpmap
             return error_t::buffer_creation_fail;
         }
 
+        buffer.allocator = allocator;
+
         return error_t::success;
     }
 
@@ -99,6 +96,8 @@ namespace bpmap
         {
             return error_t::image_creation_fail;
         }
+
+        image.allocator = allocator;
 
         return error_t::success;
     }
@@ -396,35 +395,61 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::create_command_pools()
+    error_t vulkan_t::create_command_pool(vk_command_pool_t& command_pool) const
     {
-        compute_pool = 0;
-        graphics_pool = 1;
-        transfer_pool = 2;
+        VkCommandPoolCreateInfo cpci = {};
+        cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        cpci.queueFamilyIndex = queue_index;
+        cpci.flags = 0;
+        cpci.pNext = nullptr;
 
-        VkCommandPoolCreateInfo compute_cpci = {};
-        compute_cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        compute_cpci.queueFamilyIndex = queue_index;
-        compute_cpci.flags = 0;
-        compute_cpci.pNext = nullptr;
+        VkCommandPool pool;
 
-        for(auto & pool: command_pools)
+        if(
+            vkCreateCommandPool(
+                                 device,
+                                 &cpci,
+                                 nullptr,
+                                 &pool
+                                )
+            != VK_SUCCESS
+          )
         {
-            if(
-               vkCreateCommandPool(
-                                   device,
-                                   &compute_cpci,
-                                   nullptr,
-                                   &pool
-                                  )
-               != VK_SUCCESS
-              )
-            {
-                return error_t::command_pool_creation_fail;
-            }
+            return error_t::command_pool_creation_fail;
+        }
+
+        command_pool.pool = pool;
+        command_pool.device = device;
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::create_command_buffers(
+                                              VkCommandBuffer* buffers,
+                                              const VkCommandBufferAllocateInfo &cbai
+                                            ) const
+    {
+        if(vkAllocateCommandBuffers(device, &cbai, buffers) != VK_SUCCESS)
+        {
+            return error_t::command_buffers_creation_fail;
         }
 
         return error_t::success;
+    }
+
+    error_t vulkan_t::submit_work(const VkSubmitInfo& submit_info) const
+    {
+        if(vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
+        {
+            return error_t::queue_submit_fail;
+        }
+
+        return error_t::success;
+    }
+
+    void vulkan_t::wait_idle() const
+    {
+        vkQueueWaitIdle(queue);
     }
 
     error_t vulkan_t::validate_surface_support()
@@ -637,14 +662,7 @@ namespace bpmap
 
     vulkan_t::~vulkan_t()
     {
-        std::for_each(
-                      command_pools.begin(),
-                      command_pools.end(),
-                      [this](const VkCommandPool& command_pool)
-                      {
-                           vkDestroyCommandPool(device, command_pool, nullptr);
-                      }
-                     );
+        vkDeviceWaitIdle(device);
 
         std::for_each(
                       swapchain_image_views.begin(),
@@ -657,8 +675,22 @@ namespace bpmap
 
         vkDestroySwapchainKHR(device, swapchain, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
+        vmaDestroyAllocator(allocator);
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
+    }
+
+    error_t vk_buffer_t::map(void** data)
+    {
+        if(vmaMapMemory(allocator, allocation, data) != VK_SUCCESS)
+        {
+            return error_t::memory_mapping_fail;
+        }
+    }
+
+    void vk_buffer_t::unmap()
+    {
+        vmaUnmapMemory(allocator, allocation);
     }
 
     vk_buffer_t::~vk_buffer_t()
@@ -669,6 +701,11 @@ namespace bpmap
     vk_image_t::~vk_image_t()
     {
         vmaDestroyImage(allocator, image, allocation);
+    }
+
+    vk_command_pool_t::~vk_command_pool_t()
+    {
+        vkDestroyCommandPool(device, pool, nullptr);
     }
 
 

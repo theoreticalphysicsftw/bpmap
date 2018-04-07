@@ -16,8 +16,10 @@ namespace bpmap
         copy_queue_search_fail,
         compute_queue_search_fail,
         queue_search_fail,
+        queue_submit_fail,
         get_queue_fail,
         command_pool_creation_fail,
+        command_buffers_creation_fail,
         surface_creation_fail,
         surface_validation_fail,
         swapchain_creation_fail,
@@ -34,7 +36,8 @@ namespace bpmap
         shader_creation_fail,
         vertex_shader_read_fail,
         fragment_shader_read_fail,
-        font_texture_setup_fail
+        font_texture_setup_fail,
+        memory_mapping_fail
     };
 
     string_t get_error_message(error_t e);

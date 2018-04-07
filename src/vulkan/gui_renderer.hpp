@@ -34,6 +34,9 @@ namespace bpmap
         VkRenderPass render_pass;
         darray_t<VkFramebuffer> framebuffers;
 
+        vk_command_pool_t command_pool;
+        darray_t<VkCommandBuffer> command_buffers;
+
         VkShaderModule vertex_shader;
         VkShaderModule fragment_shader;
 
@@ -55,6 +58,8 @@ namespace bpmap
         error_t create_renderpass();
         error_t create_framebuffer();
         error_t create_shaders();
+        error_t create_command_pool();
+        error_t create_command_buffers();
 
     public:
         static constexpr const char_t* vertex_shader_path = "gui.vert.spv";

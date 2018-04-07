@@ -19,9 +19,13 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
+#if defined(BPMAP_DEBUG)
+    #include<iostream>
+#endif
 
 #include <cstdint>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <unordered_map>
 #include <array>

@@ -53,10 +53,69 @@ namespace bpmap
         aci.pUserData = nullptr;
         aci.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-        if(vulkan->create_image(font_image, ici,aci) != error_t::success)
+        if(vulkan->create_image(font_image, ici, aci) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
+
+        vk_buffer_t staging_buffer;
+
+        VkBufferCreateInfo staging_buffer_bci = {};
+        staging_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        staging_buffer_bci.pNext = nullptr;
+        staging_buffer_bci.flags = 0;
+        staging_buffer_bci.queueFamilyIndexCount = 0;
+        staging_buffer_bci.pQueueFamilyIndices = nullptr;
+        staging_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        staging_buffer_bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        staging_buffer_bci.size = gui->get_font_width() * gui->get_font_height() * 4;
+
+        VmaAllocationCreateInfo staging_buffer_aci = {};
+        staging_buffer_aci.pool = VK_NULL_HANDLE;
+        staging_buffer_aci.flags = 0;
+        staging_buffer_aci.preferredFlags = 0;
+        staging_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        staging_buffer_aci.pUserData = nullptr;
+        staging_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        if(vulkan->create_buffer(staging_buffer, staging_buffer_bci, staging_buffer_aci) != error_t::success)
+        {
+            return error_t::font_texture_setup_fail;
+        }
+
+        void* mapped;
+        auto status = staging_buffer.map(&mapped);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        memcpy(mapped, gui->get_raw_font(), staging_buffer_bci.size);
+
+        staging_buffer.unmap();
+
+        VkCommandBuffer tmp_cmd_buffer;
+
+        VkCommandBufferAllocateInfo cbai = {};
+        cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cbai.pNext = nullptr;
+        cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cbai.commandPool = command_pool.pool;
+        cbai.commandBufferCount = 1;
+
+        if(vulkan->create_command_buffers(&tmp_cmd_buffer, cbai) != error_t::success)
+        {
+            return error_t::font_texture_setup_fail;
+        }
+
+        VkCommandBufferBeginInfo cbbi = {};
+        cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cbbi.pNext = nullptr;
+        cbbi.pInheritanceInfo = nullptr;
+        cbbi.flags = 0;
+
+        vkBeginCommandBuffer(tmp_cmd_buffer, &cbbi);
 
         VkImageSubresourceRange isr = {};
         isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -64,6 +123,101 @@ namespace bpmap
         isr.baseMipLevel = 0;
         isr.layerCount = 1;
         isr.levelCount = 1;
+
+        VkImageMemoryBarrier layout_barrier = {};
+        layout_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        layout_barrier.pNext = nullptr;
+        layout_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        layout_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        layout_barrier.image = font_image.image;
+        layout_barrier.srcAccessMask = 0;
+        layout_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        layout_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        layout_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        layout_barrier.subresourceRange = isr;
+
+        vkCmdPipelineBarrier(
+                              tmp_cmd_buffer,
+                              VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                              VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              0,
+                              0,
+                              nullptr,
+                              0,
+                              nullptr,
+                              1,
+                              &layout_barrier
+                            );
+
+        VkImageSubresourceLayers isl = {};
+        isl.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        isl.layerCount = 1;
+        isl.baseArrayLayer = 0;
+        isl.mipLevel = 0;
+
+        VkBufferImageCopy bic = {};
+        bic.bufferOffset = 0;
+        bic.bufferRowLength = 0;
+        bic.bufferImageHeight = 0;
+        bic.imageSubresource = isl;
+        bic.imageExtent = extent;
+        bic.imageOffset = {0, 0, 0};
+
+        vkCmdCopyBufferToImage(
+                                tmp_cmd_buffer,
+                                staging_buffer.buffer,
+                                font_image.image,
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                1,
+                                &bic
+                              );
+
+        VkImageMemoryBarrier final_layout_barrier = {};
+        final_layout_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        final_layout_barrier.pNext = nullptr;
+        final_layout_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        final_layout_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        final_layout_barrier.image = font_image.image;
+        final_layout_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        final_layout_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        final_layout_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        final_layout_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        final_layout_barrier.subresourceRange = isr;
+
+        vkCmdPipelineBarrier(
+                              tmp_cmd_buffer,
+                              VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                              0,
+                              0,
+                              nullptr,
+                              0,
+                              nullptr,
+                              1,
+                              &final_layout_barrier
+                            );
+
+        if(vkEndCommandBuffer(tmp_cmd_buffer) != VK_SUCCESS)
+        {
+            return error_t::font_texture_setup_fail;
+        }
+
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = nullptr;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &tmp_cmd_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = nullptr;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitDstStageMask = nullptr;
+        submit_info.pWaitSemaphores = nullptr;
+
+
+        if(vulkan->submit_work(submit_info) != error_t::success)
+        {
+            return error_t::font_texture_setup_fail;
+        }
 
         VkImageViewCreateInfo ivci = {};
         ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -78,6 +232,7 @@ namespace bpmap
         {
             return error_t::font_texture_setup_fail;
         }
+
 
         VkSamplerCreateInfo sci = {};
         sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -377,6 +532,25 @@ namespace bpmap
         return vulkan->create_shader(fragment_shader, fragment_smci);
     }
 
+    error_t gui_renderer_t::create_command_pool()
+    {
+        return vulkan->create_command_pool(command_pool);
+    }
+
+    error_t gui_renderer_t::create_command_buffers()
+    {
+        command_buffers.resize(framebuffers.size());
+
+        VkCommandBufferAllocateInfo cbai = {};
+        cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cbai.pNext = nullptr;
+        cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cbai.commandPool = command_pool.pool;
+        cbai.commandBufferCount = command_buffers.size();
+
+        return vulkan->create_command_buffers(command_buffers.data(), cbai);
+    }
+
 
     void gui_renderer_t::bind_gui(const gui_t &g)
     {
@@ -392,14 +566,7 @@ namespace bpmap
 
     error_t gui_renderer_t::init()
     {
-        auto status = setup_font_texture();
-
-        if(status != error_t::success)
-        {
-            return status;
-        }
-
-        status = create_shaders();
+        auto status = create_shaders();
 
         if(status != error_t::success)
         {
@@ -435,6 +602,27 @@ namespace bpmap
         }
 
         status = create_framebuffer();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_command_pool();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_command_buffers();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = setup_font_texture();
 
         if(status != error_t::success)
         {

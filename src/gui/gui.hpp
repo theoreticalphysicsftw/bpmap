@@ -54,6 +54,7 @@ namespace bpmap
 
         int32_t get_font_height() const {return font_height;}
         int32_t get_font_width() const {return font_width;}
+        const void* get_raw_font() const {return font_image;}
     };
 }
 #endif // GUI_HPP

@@ -39,7 +39,7 @@ namespace bpmap
     void gui_t::init_font_atlas()
     {
         nk_font_atlas_init_default(&font_atlas);
-        nk_font_atlas_bake(&font_atlas, &font_width, &font_height, NK_FONT_ATLAS_RGBA32);
+        font_image = nk_font_atlas_bake(&font_atlas, &font_width, &font_height, NK_FONT_ATLAS_RGBA32);
     }
 
     void gui_t::get_input()

@@ -29,11 +29,11 @@ namespace bpmap
 
     class application_t
     {
-        window_t window;
-        vulkan_t vulkan;
 
         gui_t gui;
         gui_renderer_t gui_renderer;
+        vulkan_t vulkan;
+        window_t window;
 
         error_t error;
 
