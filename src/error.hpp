@@ -16,6 +16,7 @@ namespace bpmap
         copy_queue_search_fail,
         compute_queue_search_fail,
         queue_search_fail,
+        queue_wait_fail,
         queue_submit_fail,
         get_queue_fail,
         command_pool_creation_fail,

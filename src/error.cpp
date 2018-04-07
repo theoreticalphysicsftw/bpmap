@@ -108,6 +108,9 @@ namespace bpmap
             case error_t::queue_submit_fail:
                 return "Failed to submit work to queue!";
 
+            case error_t::queue_wait_fail:
+                return "Failed to wait for queue to get idle!";
+
             case error_t::copy_queue_search_fail:
                 return "Failed to find copy queue!";
 

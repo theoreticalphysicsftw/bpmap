@@ -115,7 +115,10 @@ namespace bpmap
         cbbi.pInheritanceInfo = nullptr;
         cbbi.flags = 0;
 
-        vkBeginCommandBuffer(tmp_cmd_buffer, &cbbi);
+        if(vkBeginCommandBuffer(tmp_cmd_buffer, &cbbi) != VK_SUCCESS)
+        {
+            return error_t::font_texture_setup_fail;
+        }
 
         VkImageSubresourceRange isr = {};
         isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -213,11 +216,12 @@ namespace bpmap
         submit_info.pWaitDstStageMask = nullptr;
         submit_info.pWaitSemaphores = nullptr;
 
-
         if(vulkan->submit_work(submit_info) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
+
+        vulkan->wait_idle();
 
         VkImageViewCreateInfo ivci = {};
         ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;

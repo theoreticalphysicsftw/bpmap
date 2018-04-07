@@ -165,7 +165,7 @@ namespace bpmap
                                       ) const;
 
         error_t submit_work(const VkSubmitInfo& submit_info) const;
-        void wait_idle() const;
+        error_t wait_idle() const;
 
         VkFormat get_swapchain_format() const
         {

@@ -290,12 +290,12 @@ namespace bpmap
 
             if(properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             {
-                gpus.push_back(std::make_pair(physical_device,0));
+                gpus.push_back(std::make_pair(physical_device, 0));
             }
 
             if(properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
             {
-                gpus.push_back(std::make_pair(physical_device,1));
+                gpus.push_back(std::make_pair(physical_device, 1));
             }
         }
 
@@ -319,16 +319,12 @@ namespace bpmap
 
     error_t vulkan_t::create_logical_device()
     {
-        VkPhysicalDevice gpu;
-
-        if(find_gpu(gpu) != error_t::success)
+        if(find_gpu(gpu_device) != error_t::success)
         {
             return error_t::device_search_fail;
         }
 
-        gpu_device = gpu;
-
-        auto select_queue = [this, gpu](const VkQueueFamilyProperties& properties, size_t index)
+        auto select_queue = [this](const VkQueueFamilyProperties& properties, size_t index)
         {
             return window->queue_supports_presentation(instance, gpu_device, index)
                    && properties.queueFlags & VK_QUEUE_GRAPHICS_BIT
@@ -337,7 +333,7 @@ namespace bpmap
         };
 
 
-        if(find_queue(gpu, queue_index, select_queue) != error_t::success)
+        if(find_queue(gpu_device, queue_index, select_queue) != error_t::success)
         {
             return error_t::queue_search_fail;
         }
@@ -366,7 +362,7 @@ namespace bpmap
         dci.pQueueCreateInfos = &dqci;
         dci.pEnabledFeatures = nullptr;
 
-        if (vkCreateDevice(gpu, &dci, nullptr, &device) == VK_SUCCESS)
+        if (vkCreateDevice(gpu_device, &dci, nullptr, &device) == VK_SUCCESS)
         {
             return error_t::success;
         }
@@ -386,7 +382,7 @@ namespace bpmap
                           &queue
                          );
 
-        if(queue = VK_NULL_HANDLE)
+        if(queue == VK_NULL_HANDLE)
         {
             return error_t::get_queue_fail;
         }
@@ -447,9 +443,14 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::wait_idle() const
+    error_t vulkan_t::wait_idle() const
     {
-        vkQueueWaitIdle(queue);
+        if(vkQueueWaitIdle(queue) != VK_SUCCESS)
+        {
+            return error_t::queue_wait_fail;
+        }
+
+        return error_t::success;
     }
 
     error_t vulkan_t::validate_surface_support()
