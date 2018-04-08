@@ -223,6 +223,8 @@ namespace bpmap
 
         vulkan->wait_idle();
 
+        gui->finalize_font_atlas();
+
         VkImageViewCreateInfo ivci = {};
         ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         ivci.pNext = nullptr;
@@ -555,8 +557,79 @@ namespace bpmap
         return vulkan->create_command_buffers(command_buffers.data(), cbai);
     }
 
+    error_t gui_renderer_t::allocate_buffers()
+    {
+        VkBufferCreateInfo index_buffer_bci = {};
+        index_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        index_buffer_bci.pNext = nullptr;
+        index_buffer_bci.flags = 0;
+        index_buffer_bci.queueFamilyIndexCount = 0;
+        index_buffer_bci.pQueueFamilyIndices = nullptr;
+        index_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        index_buffer_bci.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        index_buffer_bci.size = max_gui_ibuffer_size;
 
-    void gui_renderer_t::bind_gui(const gui_t &g)
+        VmaAllocationCreateInfo index_buffer_aci = {};
+        index_buffer_aci.pool = VK_NULL_HANDLE;
+        index_buffer_aci.flags = 0;
+        index_buffer_aci.preferredFlags = 0;
+        index_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        index_buffer_aci.pUserData = nullptr;
+        index_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        auto status = vulkan->create_buffer(index_buffer, index_buffer_bci, index_buffer_aci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        VkBufferCreateInfo vertex_buffer_bci = {};
+        vertex_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        vertex_buffer_bci.pNext = nullptr;
+        vertex_buffer_bci.flags = 0;
+        vertex_buffer_bci.queueFamilyIndexCount = 0;
+        vertex_buffer_bci.pQueueFamilyIndices = nullptr;
+        vertex_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        vertex_buffer_bci.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        vertex_buffer_bci.size = max_gui_ibuffer_size;
+
+        VmaAllocationCreateInfo vertex_buffer_aci = {};
+        vertex_buffer_aci.pool = VK_NULL_HANDLE;
+        vertex_buffer_aci.flags = 0;
+        vertex_buffer_aci.preferredFlags = 0;
+        vertex_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        vertex_buffer_aci.pUserData = nullptr;
+        vertex_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        status = vulkan->create_buffer(vertex_buffer, vertex_buffer_bci, vertex_buffer_aci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return error_t::success;
+    }
+
+    error_t gui_renderer_t::create_buffers()
+    {
+        void* ibuffer;
+        index_buffer.map(&ibuffer);
+
+        void* vbuffer;
+        vertex_buffer.map(&vbuffer);
+
+        gui->emit_buffers(ibuffer, max_gui_ibuffer_size, vbuffer, max_gui_vbuffer_size);
+
+        index_buffer.unmap();
+        vertex_buffer.unmap();
+
+        return error_t::success;
+    }
+
+
+    void gui_renderer_t::bind_gui(gui_t &g)
     {
         gui = &g;
     }
@@ -627,6 +700,28 @@ namespace bpmap
         }
 
         status = setup_font_texture();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = allocate_buffers();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return error_t::success;
+    }
+
+    error_t gui_renderer_t::render_frame()
+    {
+        gui->get_input();
+        gui->run();
+
+        auto status = create_buffers();
 
         if(status != error_t::success)
         {

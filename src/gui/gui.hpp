@@ -31,6 +31,7 @@
 #include <common.hpp>
 
 #include "window/window.hpp"
+#include "core/algebra.hpp"
 
 namespace bpmap
 {
@@ -40,13 +41,15 @@ namespace bpmap
 
         nk_context context;
         nk_font_atlas font_atlas;
+        nk_draw_null_texture null_texture;
+        nk_buffer commands;
 
         const void* font_image;
         int32_t font_height;
         int32_t font_width;
 
         void init_font_atlas();
-        void get_input();
+
 
     public:
         gui_t();
@@ -55,6 +58,25 @@ namespace bpmap
         int32_t get_font_height() const {return font_height;}
         int32_t get_font_width() const {return font_width;}
         const void* get_raw_font() const {return font_image;}
+
+        void emit_buffers(
+                           void* ibuffer,
+                           uint32_t ibuffer_size,
+                           void* vbuffer,
+                           uint32_t vbuffer_size
+                         );
+
+        void finalize_font_atlas() ;
+
+        void get_input();
+        void run();
+    };
+
+    struct gui_vertex_t
+    {
+        point2d_t position;
+        point2d_t uv; // Parametrization coordinates
+        color4d_t color;
     };
 }
 #endif // GUI_HPP

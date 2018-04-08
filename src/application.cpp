@@ -53,6 +53,7 @@ namespace bpmap
         while(!window.closed())
         {
             window.poll_events();
+            gui_renderer.render_frame();
         }
     }
 }

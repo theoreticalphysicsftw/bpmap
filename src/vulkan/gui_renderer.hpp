@@ -48,7 +48,7 @@ namespace bpmap
         vk_buffer_t vertex_buffer;
         vk_buffer_t index_buffer;
 
-        const gui_t* gui;
+        gui_t* gui;
         const vulkan_t* vulkan;
 
         error_t setup_font_texture();
@@ -60,25 +60,26 @@ namespace bpmap
         error_t create_shaders();
         error_t create_command_pool();
         error_t create_command_buffers();
+        error_t allocate_buffers();
+        error_t create_buffers();
 
     public:
         static constexpr const char_t* vertex_shader_path = "gui.vert.spv";
         static constexpr const char_t* fragment_shader_path = "gui.frag.spv";
 
-        void bind_gui(const gui_t& gui);
+        static constexpr uint32_t max_gui_ibuffer_size = 1 << 16;
+        static constexpr uint32_t max_gui_vbuffer_size = 1 << 20;
+
+        void bind_gui(gui_t& gui);
         void bind_vulkan(const vulkan_t& vulkan);
 
         error_t init();
 
+        error_t render_frame();
+
         ~gui_renderer_t();
     };
 
-    struct gui_vertex_t
-    {
-        point2d_t position;
-        point2d_t uv; // Parametrization coordinates
-        color4d_t color;
-    };
 }
 
 #endif // GUI_RENDERER_HPP

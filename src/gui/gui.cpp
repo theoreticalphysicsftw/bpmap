@@ -31,6 +31,8 @@ namespace bpmap
 {
     gui_t::gui_t()
     {
+        nk_buffer_init_default(&commands);
+
         nk_init_default(&context, nullptr);
 
         init_font_atlas();
@@ -80,5 +82,51 @@ namespace bpmap
     void gui_t::bind_window(window_t& win)
     {
         window = &win;
+    }
+
+    void gui_t::emit_buffers(void *ibuffer, uint32_t ibuffer_size, void *vbuffer, uint32_t vbuffer_size)
+    {
+        nk_convert_config config = {};
+
+        static const nk_draw_vertex_layout_element vertex_layout[] =
+        {
+            {NK_VERTEX_POSITION, NK_FORMAT_FLOAT, offsetof(gui_vertex_t, position)},
+            {NK_VERTEX_TEXCOORD, NK_FORMAT_FLOAT, offsetof(gui_vertex_t, uv)},
+            {NK_VERTEX_COLOR, NK_FORMAT_R8G8B8A8, offsetof(gui_vertex_t, color)},
+            {NK_VERTEX_LAYOUT_END}
+        };
+
+        config.shape_AA = NK_ANTI_ALIASING_ON;
+        config.line_AA = NK_ANTI_ALIASING_ON;
+        config.vertex_layout = vertex_layout;
+        config.vertex_size = sizeof(gui_vertex_t);
+        config.vertex_alignment = NK_ALIGNOF(gui_vertex_t);
+        config.circle_segment_count = 22;
+        config.curve_segment_count = 22;
+        config.arc_segment_count = 22;
+        config.global_alpha = 1.0f;
+        config.null = null_texture;
+
+
+        nk_buffer indices;
+        nk_buffer vertices;
+
+        nk_buffer_free(&commands);
+        nk_buffer_init_default(&commands);
+
+        nk_buffer_init_fixed(&vertices,vbuffer, vbuffer_size);
+        nk_buffer_init_fixed(&indices,ibuffer, ibuffer_size);
+
+        nk_convert(&context, &commands, &vertices, &indices, &config);
+    }
+
+    void gui_t::finalize_font_atlas()
+    {
+        nk_font_atlas_end(&font_atlas, nk_handle_id(0), &null_texture);
+    }
+
+    void gui_t::run()
+    {
+
     }
 }
