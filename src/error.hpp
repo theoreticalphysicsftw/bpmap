@@ -26,6 +26,7 @@ namespace bpmap
         swapchain_creation_fail,
         allocator_creation_fail,
         buffer_creation_fail,
+        semaphore_creation_fail,
         image_creation_fail,
         image_view_creation_fail,
         sampler_creation_fail,
@@ -34,11 +35,14 @@ namespace bpmap
         framebuffer_creation_fail,
         pipeline_layout_creation_fail,
         descriptor_set_layout_creation_fail,
+        descriptor_pool_creation_fail,
+        descriptor_set_allocation_fail,
         shader_creation_fail,
         vertex_shader_read_fail,
         fragment_shader_read_fail,
         font_texture_setup_fail,
-        memory_mapping_fail
+        memory_mapping_fail,
+        command_buffer_begin_fail,
     };
 
     string_t get_error_message(error_t e);

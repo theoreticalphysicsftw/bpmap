@@ -70,6 +70,33 @@ namespace bpmap
 
     };
 
+    template<typename T, size_t size_0, size_t size_1>
+    struct transform_t
+    {
+        using value_t = T;
+
+        value_t components[size_0 * size_1];
+
+        #define BPMAP_IMPLEMENT_TRANSFORM_OPERATOR(OP) \
+        transform_t operator OP (transform_t& rhs) \
+        { \
+            transform_t result; \
+            \
+            auto size = size_0 * size_1;\
+            \
+            for(auto i = 0u; i < size; ++i) \
+            { \
+                result.components[i] = components[i] OP rhs.components[i]; \
+            } \
+            \
+            return result; \
+        }
+
+        BPMAP_IMPLEMENT_TRANSFORM_OPERATOR(+)
+        BPMAP_IMPLEMENT_TRANSFORM_OPERATOR(-)
+
+        #undef BPMAP_IMPLEMENT_TRANSFORM_OPERATOR
+    };
 
     template<typename T, size_t size>
     struct point_t
@@ -99,14 +126,18 @@ namespace bpmap
     using point3d_embedded_t = point_t<float_t, 4>;
     using direction3d_embedded_t = vector_t<float_t, 4, false>;
     using codirection3d_embedded_t = vector_t<float_t, 4, true>;
+    using transform3d_embedded_t = transform_t<float_t, 4, 4>;
 
     using point3d_t = point_t<float_t, 3>;
     using direction3d_t = vector_t<float_t, 3, false>;
     using codirection3d_t = vector_t<float_t, 3, true>;
+    using transform3d_t = transform_t<float_t, 3, 3>;
+
 
     using point2d_t = point_t<float_t, 2>;
     using direction2d_t = vector_t<float_t, 2, false>;
     using codirection2d_t = vector_t<float_t, 2, true>;
+    using transform_2d_t = transform_t<float_t, 2, 2>;
 
     using color4d_t = vector_t<uint8_t, 4, false>;
 }

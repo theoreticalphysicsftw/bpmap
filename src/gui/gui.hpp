@@ -35,6 +35,21 @@
 
 namespace bpmap
 {
+    struct gui_data_t
+    {
+        transform3d_embedded_t projection;
+    };
+
+    struct draw_call_t
+    {
+        float_t scissor_width;
+        float_t scissor_height;
+        float_t scissor_horizontal_offset;
+        float_t scissor_vertical_offset;
+        uint16_t elements;
+        uint16_t offset;
+    };
+
     class gui_t
     {
         window_t * window;
@@ -67,6 +82,13 @@ namespace bpmap
                          );
 
         void finalize_font_atlas() ;
+
+        gui_data_t get_gui_data();
+
+        darray_t<draw_call_t> emit_draw_calls();
+
+        size_t get_width() const {window->get_width();}
+        size_t get_height() const {window->get_height();}
 
         void get_input();
         void run();

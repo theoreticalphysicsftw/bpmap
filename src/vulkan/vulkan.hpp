@@ -37,6 +37,7 @@ namespace bpmap
     class vk_buffer_t;
     class vk_image_t;
     class vk_command_pool_t;
+    class vk_semaphore_t;
 
     class vulkan_t
     {
@@ -136,10 +137,22 @@ namespace bpmap
                                               const VkDescriptorSetLayoutCreateInfo& dslci
                                             ) const;
 
+        error_t create_descriptor_pool(
+                                        VkDescriptorPool& pool,
+                                        const VkDescriptorPoolCreateInfo& dpci
+                                      ) const;
+
+        error_t allocate_descriptor_set(
+                                         VkDescriptorSet& set,
+                                         const VkDescriptorSetAllocateInfo& dsai
+                                       ) const;
+
         error_t create_graphics_pipeline(
                                           VkPipeline& pipeline,
                                           const VkGraphicsPipelineCreateInfo& gpci
                                         ) const;
+
+        void destroy_pipeline(VkPipeline) const;
 
         error_t create_renederpass(
                                     VkRenderPass& render_pass,
@@ -164,6 +177,8 @@ namespace bpmap
                                         const VkCommandBufferAllocateInfo& cbai
                                       ) const;
 
+        error_t create_semaphore(vk_semaphore_t& semaphore) const;
+
         error_t submit_work(const VkSubmitInfo& submit_info) const;
         error_t wait_idle() const;
 
@@ -171,6 +186,10 @@ namespace bpmap
         {
             return swapchain_image_format;
         }
+
+        void update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const;
+
+        error_t get_next_swapchain_image(uint32_t&, const vk_semaphore_t&) const;
 
         ~vulkan_t();
     };
@@ -217,6 +236,18 @@ namespace bpmap
         VkCommandPool pool;
 
         ~vk_command_pool_t();
+    };
+
+    class vk_semaphore_t
+    {
+        friend class vulkan_t;
+
+        VkDevice device;
+
+    public:
+        VkSemaphore semaphore;
+
+        ~vk_semaphore_t();
     };
 }
 #endif // VULKAN_HPP

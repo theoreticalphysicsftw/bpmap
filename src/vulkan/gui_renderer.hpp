@@ -29,13 +29,18 @@ namespace bpmap
     class gui_renderer_t
     {
         VkPipeline pipeline;
-        VkDescriptorSetLayout descriptor_set_layout;
         VkPipelineLayout pipeline_layout;
         VkRenderPass render_pass;
+        VkDescriptorSetLayout descriptor_set_layout;
+        VkDescriptorPool descriptor_pool;
+        VkDescriptorSet descriptor_set;
         darray_t<VkFramebuffer> framebuffers;
 
         vk_command_pool_t command_pool;
         darray_t<VkCommandBuffer> command_buffers;
+
+        vk_semaphore_t image_available;
+        vk_semaphore_t render_finished;
 
         VkShaderModule vertex_shader;
         VkShaderModule fragment_shader;
@@ -47,12 +52,18 @@ namespace bpmap
 
         vk_buffer_t vertex_buffer;
         vk_buffer_t index_buffer;
+        vk_buffer_t gui_data_buffer;
+
+        gui_data_t gui_data;
 
         gui_t* gui;
         const vulkan_t* vulkan;
 
         error_t setup_font_texture();
         error_t create_descriptor_sets_layout();
+        error_t create_descriptor_pool();
+        error_t create_descriptor_sets();
+        error_t update_descriptor_sets();
         error_t create_pipeline_layout();
         error_t create_pipeline();
         error_t create_renderpass();
@@ -60,8 +71,12 @@ namespace bpmap
         error_t create_shaders();
         error_t create_command_pool();
         error_t create_command_buffers();
+        error_t create_semaphores();
         error_t allocate_buffers();
         error_t create_buffers();
+        error_t upload_gui_data();
+
+        error_t build_command_buffer(uint32_t index);
 
     public:
         static constexpr const char_t* vertex_shader_path = "gui.vert.spv";

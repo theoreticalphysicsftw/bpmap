@@ -16,6 +16,7 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
+#include <limits>
 
 #define VMA_IMPLEMENTATION
 #include "vulkan.hpp"
@@ -133,6 +134,33 @@ namespace bpmap
         return error_t::success;
     }
 
+    error_t vulkan_t::create_descriptor_pool(
+                                              VkDescriptorPool &pool,
+                                              const VkDescriptorPoolCreateInfo &dpci
+                                            ) const
+    {
+        if(vkCreateDescriptorPool(device, &dpci, nullptr, &pool) != VK_SUCCESS)
+        {
+            return error_t::descriptor_pool_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::allocate_descriptor_set(
+                                               VkDescriptorSet& set,
+                                               const VkDescriptorSetAllocateInfo &dsai
+                                             ) const
+    {
+        if(vkAllocateDescriptorSets(device, &dsai, &set) != VK_SUCCESS)
+        {
+            return error_t::descriptor_set_allocation_fail;
+        }
+
+        return error_t::success;
+    }
+
+
     error_t vulkan_t::create_image_view(VkImageView &image_view, VkImageViewCreateInfo &ivci) const
     {
         if(vkCreateImageView(device, &ivci, nullptr,&image_view) != VK_SUCCESS)
@@ -179,6 +207,11 @@ namespace bpmap
         }
 
         return error_t::success;
+    }
+
+    void vulkan_t::destroy_pipeline(VkPipeline pipeline) const
+    {
+        vkDestroyPipeline(device, pipeline, nullptr);
     }
 
     error_t vulkan_t::create_renederpass(
@@ -433,6 +466,23 @@ namespace bpmap
         return error_t::success;
     }
 
+    error_t vulkan_t::create_semaphore(vk_semaphore_t& semaphore) const
+    {
+        VkSemaphoreCreateInfo sci = {};
+        sci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        sci.pNext = nullptr;
+        sci.flags = 0;
+
+        if(vkCreateSemaphore(device, &sci, nullptr, &semaphore.semaphore) != VK_SUCCESS)
+        {
+            return error_t::semaphore_creation_fail;
+        }
+
+        semaphore.device = device;
+
+        return error_t::success;
+    }
+
     error_t vulkan_t::submit_work(const VkSubmitInfo& submit_info) const
     {
         if(vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
@@ -449,6 +499,25 @@ namespace bpmap
         {
             return error_t::queue_wait_fail;
         }
+
+        return error_t::success;
+    }
+
+    void vulkan_t::update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const
+    {
+        vkUpdateDescriptorSets(device, count, writes, 0, nullptr);
+    }
+
+    error_t vulkan_t::get_next_swapchain_image(uint32_t &fb_index, const vk_semaphore_t& semaphore) const
+    {
+        vkAcquireNextImageKHR(
+                               device,
+                               swapchain,
+                               std::numeric_limits<uint64_t>::max(),
+                               semaphore.semaphore,
+                               VK_NULL_HANDLE,
+                               &fb_index
+                             );
 
         return error_t::success;
     }
@@ -707,6 +776,11 @@ namespace bpmap
     vk_command_pool_t::~vk_command_pool_t()
     {
         vkDestroyCommandPool(device, pool, nullptr);
+    }
+
+    vk_semaphore_t::~vk_semaphore_t()
+    {
+        vkDestroySemaphore(device, semaphore, nullptr);
     }
 
 

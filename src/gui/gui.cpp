@@ -41,6 +41,7 @@ namespace bpmap
     void gui_t::init_font_atlas()
     {
         nk_font_atlas_init_default(&font_atlas);
+        nk_font_atlas_begin(&font_atlas);
         font_image = nk_font_atlas_bake(&font_atlas, &font_width, &font_height, NK_FONT_ATLAS_RGBA32);
     }
 
@@ -84,7 +85,7 @@ namespace bpmap
         window = &win;
     }
 
-    void gui_t::emit_buffers(void *ibuffer, uint32_t ibuffer_size, void *vbuffer, uint32_t vbuffer_size)
+    void gui_t::emit_buffers(void* ibuffer, uint32_t ibuffer_size, void* vbuffer, uint32_t vbuffer_size)
     {
         nk_convert_config config = {};
 
@@ -122,11 +123,63 @@ namespace bpmap
 
     void gui_t::finalize_font_atlas()
     {
-        nk_font_atlas_end(&font_atlas, nk_handle_id(0), &null_texture);
+        nk_font_atlas_end(&font_atlas, nk_handle_ptr(nullptr), &null_texture);
+        nk_style_set_font(&context, &font_atlas.default_font->handle);
     }
+
+    gui_data_t gui_t::get_gui_data()
+    {
+        gui_data_t data;
+
+        memset(&data, 0, sizeof(data));
+
+        data.projection.components[0] = 1.0 / window->get_width();
+        data.projection.components[5] = 1.0 / window->get_height();
+        data.projection.components[10] = -1.0;
+        data.projection.components[16] = 1.0;
+
+        return data;
+    }
+
+    darray_t<draw_call_t> gui_t::emit_draw_calls()
+    {
+        static constexpr uint32_t init_calls_size = 1 << 12;
+        darray_t<draw_call_t> calls;
+        calls.reserve(init_calls_size);
+
+        auto offset = 0;
+        const nk_draw_command* cmd;
+        nk_draw_foreach(cmd, &context, &commands)
+        {
+            draw_call_t call = {};
+            call.elements = cmd->elem_count;
+            call.offset = offset;
+            call.scissor_height = cmd->clip_rect.h;
+            call.scissor_width = cmd->clip_rect.h;
+            call.scissor_horizontal_offset = cmd->clip_rect.x;
+            call.scissor_vertical_offset = cmd->clip_rect.y;
+
+            calls.push_back(call);
+
+            offset += cmd->elem_count;
+        }
+
+        return calls;
+    }
+
+
 
     void gui_t::run()
     {
+        nk_begin(&context, "bpmap", nk_rect(0,0, window->get_width(), window->get_height()), 0);
 
+        nk_clear(&context);
+
+        if(nk_button_label(&context, "test"))
+        {
+
+        }
+
+        nk_end(&context);
     }
 }

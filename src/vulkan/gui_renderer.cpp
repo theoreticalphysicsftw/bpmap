@@ -16,6 +16,7 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cstddef>
+#include <limits>
 
 #include "gui_renderer.hpp"
 
@@ -283,6 +284,74 @@ namespace bpmap
         dslci.pBindings = dslb;
 
         return vulkan->create_descriptor_set_layout(descriptor_set_layout, dslci);
+    }
+
+    error_t gui_renderer_t::create_descriptor_pool()
+    {
+        VkDescriptorPoolSize pool_sizes[2] = {};
+
+        pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        pool_sizes[0].descriptorCount = 1;
+        pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        pool_sizes[1].descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo dpci = {};
+        dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        dpci.pNext = nullptr;
+        dpci.maxSets = 1;
+        dpci.poolSizeCount = 2;
+        dpci.pPoolSizes = pool_sizes;
+
+        return vulkan->create_descriptor_pool(descriptor_pool, dpci);
+    }
+
+    error_t gui_renderer_t::create_descriptor_sets()
+    {
+        VkDescriptorSetAllocateInfo dsai = {};
+        dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        dsai.pNext = nullptr;
+        dsai.descriptorSetCount = 1;
+        dsai.pSetLayouts = &descriptor_set_layout;
+        dsai.descriptorPool = descriptor_pool;
+
+        return vulkan->allocate_descriptor_set(descriptor_set, dsai);
+    }
+
+    error_t gui_renderer_t::update_descriptor_sets()
+    {
+        VkDescriptorBufferInfo gui_data_bind_info = {};
+        gui_data_bind_info.buffer = gui_data_buffer.buffer;
+        gui_data_bind_info.offset = 0;
+        gui_data_bind_info.range = sizeof(gui_data);
+
+        VkDescriptorImageInfo font_texture_bind_info = {};
+        font_texture_bind_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        font_texture_bind_info.imageView = font_view;
+        font_texture_bind_info.sampler = font_sampler;
+
+        VkWriteDescriptorSet wds[2] = {};
+
+        wds[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[0].pNext = nullptr;
+        wds[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        wds[0].dstSet = descriptor_set;
+        wds[0].dstBinding = 0;
+        wds[0].dstArrayElement = 0;
+        wds[0].pBufferInfo = &gui_data_bind_info;
+        wds[0].pImageInfo = nullptr;
+        wds[0].pTexelBufferView = nullptr;
+
+        wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[1].pNext = nullptr;
+        wds[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        wds[1].dstSet = descriptor_set;
+        wds[1].dstBinding = 1;
+        wds[1].dstArrayElement = 0;
+        wds[1].pBufferInfo = nullptr;
+        wds[1].pImageInfo = &font_texture_bind_info;
+        wds[1].pTexelBufferView = nullptr;
+
+        vulkan->update_descriptor_sets(wds, 2);
     }
 
 
@@ -557,6 +626,18 @@ namespace bpmap
         return vulkan->create_command_buffers(command_buffers.data(), cbai);
     }
 
+    error_t gui_renderer_t::create_semaphores()
+    {
+        auto status = vulkan->create_semaphore(image_available);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return vulkan->create_semaphore(render_finished);
+    }
+
     error_t gui_renderer_t::allocate_buffers()
     {
         VkBufferCreateInfo index_buffer_bci = {};
@@ -592,7 +673,7 @@ namespace bpmap
         vertex_buffer_bci.pQueueFamilyIndices = nullptr;
         vertex_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         vertex_buffer_bci.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        vertex_buffer_bci.size = max_gui_ibuffer_size;
+        vertex_buffer_bci.size = max_gui_vbuffer_size;
 
         VmaAllocationCreateInfo vertex_buffer_aci = {};
         vertex_buffer_aci.pool = VK_NULL_HANDLE;
@@ -603,6 +684,31 @@ namespace bpmap
         vertex_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
         status = vulkan->create_buffer(vertex_buffer, vertex_buffer_bci, vertex_buffer_aci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        VkBufferCreateInfo gui_data_buffer_bci = {};
+        gui_data_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        gui_data_buffer_bci.pNext = nullptr;
+        gui_data_buffer_bci.flags = 0;
+        gui_data_buffer_bci.queueFamilyIndexCount = 0;
+        gui_data_buffer_bci.pQueueFamilyIndices = nullptr;
+        gui_data_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        gui_data_buffer_bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        gui_data_buffer_bci.size = sizeof(gui_data);
+
+        VmaAllocationCreateInfo gui_data_buffer_aci = {};
+        gui_data_buffer_aci.pool = VK_NULL_HANDLE;
+        gui_data_buffer_aci.flags = 0;
+        gui_data_buffer_aci.preferredFlags = 0;
+        gui_data_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        gui_data_buffer_aci.pUserData = nullptr;
+        gui_data_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        status = vulkan->create_buffer(gui_data_buffer, gui_data_buffer_bci, gui_data_buffer_aci);
 
         if(status != error_t::success)
         {
@@ -628,6 +734,104 @@ namespace bpmap
         return error_t::success;
     }
 
+    error_t gui_renderer_t::upload_gui_data()
+    {
+        void* data;
+
+        gui_data = gui->get_gui_data();
+
+        gui_data_buffer.map(&data);
+        memcpy(data, &gui_data, sizeof(gui_data));
+        gui_data_buffer.unmap();
+
+        return error_t::success;
+    }
+
+    error_t gui_renderer_t::build_command_buffer(uint32_t index)
+    {
+        VkCommandBufferBeginInfo cbbi = {};
+        cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cbbi.pNext = nullptr;
+        cbbi.pInheritanceInfo = nullptr;
+        cbbi.flags = 0;
+
+        if(vkBeginCommandBuffer(command_buffers[index], &cbbi) != VK_SUCCESS)
+        {
+            return error_t::command_buffer_begin_fail;
+        }
+
+        VkExtent2D extent;
+        extent.height = gui->get_height();
+        extent.width = gui->get_width();
+
+        VkOffset2D offset = {0, 0};
+
+        VkRect2D render_area;
+        render_area.extent = extent;
+        render_area.offset = offset;
+
+        VkRenderPassBeginInfo rpbi = {};
+        rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpbi.pNext = nullptr;
+        rpbi.renderPass = render_pass;
+        rpbi.framebuffer = framebuffers[index];
+        rpbi.clearValueCount = 0;
+        rpbi.pClearValues = nullptr;
+        rpbi.renderArea = render_area;
+
+        vkCmdBeginRenderPass(command_buffers[index], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+
+        VkViewport viewport;
+        viewport.height = gui->get_height();
+        viewport.width = gui->get_width();
+        viewport.x = 0.0;
+        viewport.y = 0.0;
+        viewport.minDepth = 0.0;
+        viewport.maxDepth = 1.0;
+
+        vkCmdSetViewport(command_buffers[index], 0, 1, &viewport);
+
+        vkCmdBindPipeline(command_buffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        vkCmdBindDescriptorSets(
+                                 command_buffers[index],
+                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                 pipeline_layout,
+                                 0,
+                                 1,
+                                 &descriptor_set,
+                                 0,
+                                 nullptr
+                                );
+
+        VkDeviceSize off = 0;
+        vkCmdBindVertexBuffers(command_buffers[index], 0, 1, &vertex_buffer.buffer, &off);
+        vkCmdBindIndexBuffer(command_buffers[index], index_buffer.buffer, off, VK_INDEX_TYPE_UINT16);
+
+        auto cmds = gui->emit_draw_calls();
+
+        for(auto& cmd : cmds)
+        {
+            VkExtent2D extent;
+            extent.width = cmd.scissor_width;
+            extent.height = cmd.scissor_height;
+
+            VkOffset2D offset;
+            offset.x = cmd.scissor_horizontal_offset;
+            offset.y = cmd.scissor_vertical_offset;
+
+            VkRect2D scissor;
+            scissor.extent = extent;
+            scissor.offset = offset;
+
+            vkCmdSetScissor(command_buffers[index], 0, 1, &scissor);
+
+            vkCmdDrawIndexed(command_buffers[index], cmd.elements, 1, cmd.offset, 0, 0);
+        }
+
+        vkCmdEndRenderPass(command_buffers[index]);
+    }
+
 
     void gui_renderer_t::bind_gui(gui_t &g)
     {
@@ -643,7 +847,14 @@ namespace bpmap
 
     error_t gui_renderer_t::init()
     {
-        auto status = create_shaders();
+        auto status = create_semaphores();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_shaders();
 
         if(status != error_t::success)
         {
@@ -658,6 +869,20 @@ namespace bpmap
         }
 
         status = create_descriptor_sets_layout();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_descriptor_pool();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_descriptor_sets();
 
         if(status != error_t::success)
         {
@@ -713,6 +938,13 @@ namespace bpmap
             return status;
         }
 
+        status = update_descriptor_sets();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
         return error_t::success;
     }
 
@@ -728,13 +960,28 @@ namespace bpmap
             return status;
         }
 
+        upload_gui_data();
+
+        uint32_t fb_index;
+
+        status = vulkan->get_next_swapchain_image(fb_index, image_available);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        build_command_buffer(fb_index);
+        submit_command_buffer(fb_index);
+
         return error_t::success;
     }
 
 
     gui_renderer_t::~gui_renderer_t()
     {
-        vulkan->destroy_image_view(font_view);
         vulkan->destroy_sampler(font_sampler);
+        vulkan->destroy_image_view(font_view);
+        vulkan->destroy_pipeline(pipeline);
     }
 }

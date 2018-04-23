@@ -32,8 +32,8 @@ namespace bpmap
 
         gui_t gui;
         gui_renderer_t gui_renderer;
-        vulkan_t vulkan;
         window_t window;
+        vulkan_t vulkan;
 
         error_t error;
 

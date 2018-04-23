@@ -60,6 +60,9 @@ namespace bpmap
             case error_t::buffer_creation_fail:
                 return "Failed to create buffer!";
 
+            case error_t::semaphore_creation_fail:
+                return "Failed to create semaphore!";
+
             case error_t::image_creation_fail:
                 return "Failed to create image!";
 
@@ -77,6 +80,12 @@ namespace bpmap
 
             case error_t::descriptor_set_layout_creation_fail:
                 return "Failed to create descriptor set layout!";
+
+            case error_t::descriptor_pool_creation_fail:
+                return "Failed to create descriptor pool!";
+
+            case error_t::descriptor_set_allocation_fail:
+                return "Failed to allocate descriptor set!";
 
             case error_t::pipeline_creation_fail:
                 return "Failed to create pipeline!";
@@ -116,6 +125,9 @@ namespace bpmap
 
             case error_t::memory_mapping_fail:
                 return "Failed to map memory!";
+
+            case error_t::command_buffer_begin_fail:
+                return "Failed to begin command buffe!";
         }
     }
 }
