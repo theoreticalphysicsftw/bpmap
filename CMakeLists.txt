@@ -9,7 +9,7 @@ if((DEFINED CMAKE_BUILD_TYPE))
 endif()
 
 set(RELEASE_OPTIONS "-O3" "-fno-exceptions" "-std=c++17")
-set(DEBUG_OPTIONS "-std=c++17")
+set(DEBUG_OPTIONS "-g" "-O0" "-std=c++17")
 
 list(APPEND SOURCE_FILES "src/main.cpp")
 list(APPEND SOURCE_FILES "src/application.cpp")

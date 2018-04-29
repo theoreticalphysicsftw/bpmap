@@ -29,15 +29,11 @@
 
 namespace bpmap
 {
-    static constexpr uint32_t compute_queue = 0;
-    static constexpr uint32_t graphics_queue = 1;
-    static constexpr uint32_t copy_queue = 2;
-    static constexpr uint32_t number_of_queues = 3;
-
     class vk_buffer_t;
     class vk_image_t;
     class vk_command_pool_t;
     class vk_semaphore_t;
+    class vk_fence_t;
 
     class vulkan_t
     {
@@ -132,15 +128,21 @@ namespace bpmap
                                         const VkPipelineLayoutCreateInfo& plci
                                       ) const;
 
+        void destroy_pipeline_layout(VkPipelineLayout layout) const;
+
         error_t create_descriptor_set_layout(
                                               VkDescriptorSetLayout& layout,
                                               const VkDescriptorSetLayoutCreateInfo& dslci
                                             ) const;
 
+        void destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const;
+
         error_t create_descriptor_pool(
                                         VkDescriptorPool& pool,
                                         const VkDescriptorPoolCreateInfo& dpci
                                       ) const;
+
+        void destroy_descriptor_pool(VkDescriptorPool pool) const;
 
         error_t allocate_descriptor_set(
                                          VkDescriptorSet& set,
@@ -159,16 +161,20 @@ namespace bpmap
                                     const VkRenderPassCreateInfo& rpci
                                   ) const;
 
+        void destroy_render_pass(VkRenderPass render_pass) const;
 
         error_t create_framebuffers(
                                      darray_t<VkFramebuffer>& framebuffers,
                                      VkFramebufferCreateInfo& fbci
                                    ) const ;
 
+        void destroy_framebuffers(const darray_t<VkFramebuffer>& framebuffers) const;
 
         error_t create_shader( VkShaderModule& shader,
                                const VkShaderModuleCreateInfo& smci
                              ) const;
+
+        void destroy_shader(VkShaderModule shader) const;
 
         error_t create_command_pool(vk_command_pool_t& pool) const;
 
@@ -178,8 +184,10 @@ namespace bpmap
                                       ) const;
 
         error_t create_semaphore(vk_semaphore_t& semaphore) const;
+        error_t create_fence(vk_fence_t& fence) const;
 
-        error_t submit_work(const VkSubmitInfo& submit_info) const;
+        error_t submit_work(const VkSubmitInfo& submit_info, const vk_fence_t& fence) const;
+        error_t wait_for_fence(const vk_fence_t& fence, uint64_t timeout) const;
         error_t wait_idle() const;
 
         VkFormat get_swapchain_format() const
@@ -190,6 +198,7 @@ namespace bpmap
         void update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const;
 
         error_t get_next_swapchain_image(uint32_t&, const vk_semaphore_t&) const;
+        error_t present_on_screen(uint32_t index, const vk_semaphore_t& wait_semaphore) const;
 
         ~vulkan_t();
     };
@@ -208,6 +217,7 @@ namespace bpmap
 
         VkBuffer buffer;
 
+        vk_buffer_t();
         ~vk_buffer_t();
     };
 
@@ -222,6 +232,7 @@ namespace bpmap
     public:
         VkImage image;
 
+        vk_image_t();
         ~vk_image_t();
     };
 
@@ -235,6 +246,7 @@ namespace bpmap
     public:
         VkCommandPool pool;
 
+        vk_command_pool_t();
         ~vk_command_pool_t();
     };
 
@@ -247,7 +259,20 @@ namespace bpmap
     public:
         VkSemaphore semaphore;
 
+        vk_semaphore_t();
         ~vk_semaphore_t();
+    };
+
+    class vk_fence_t
+    {
+        friend class vulkan_t;
+
+        VkDevice device;
+
+    public:
+        VkFence fence;
+         vk_fence_t();
+        ~vk_fence_t();
     };
 }
 #endif // VULKAN_HPP

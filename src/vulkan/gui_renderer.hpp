@@ -77,6 +77,8 @@ namespace bpmap
         error_t upload_gui_data();
 
         error_t build_command_buffer(uint32_t index);
+        error_t submit_command_buffer(uint32_t index);
+        error_t present_on_screen(uint64_t index);
 
     public:
         static constexpr const char_t* vertex_shader_path = "gui.vert.spv";

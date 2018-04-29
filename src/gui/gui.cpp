@@ -131,12 +131,27 @@ namespace bpmap
     {
         gui_data_t data;
 
-        memset(&data, 0, sizeof(data));
 
-        data.projection.components[0] = 1.0 / window->get_width();
-        data.projection.components[5] = 1.0 / window->get_height();
-        data.projection.components[10] = -1.0;
-        data.projection.components[16] = 1.0;
+        data.projection.components[0] = 2.0 / window->get_width();
+        data.projection.components[1] = 0.0;
+        data.projection.components[2] = 0.0;
+        data.projection.components[3] = 0.0;
+
+        data.projection.components[4] = 0.0;
+        data.projection.components[5] = 2.0 / window->get_height();
+        data.projection.components[6] = 0.0;
+        data.projection.components[7] = 0.0;
+
+        data.projection.components[8] = 0.0;
+        data.projection.components[9] = 0.0;
+        data.projection.components[10] = 1.0;
+        data.projection.components[11] = 0.0;
+
+        data.projection.components[12] = -1.0;
+        data.projection.components[13] = -1.0;
+        data.projection.components[14] = 0.0;
+        data.projection.components[15] = 1.0;
+
 
         return data;
     }
@@ -156,8 +171,8 @@ namespace bpmap
             call.offset = offset;
             call.scissor_height = cmd->clip_rect.h;
             call.scissor_width = cmd->clip_rect.h;
-            call.scissor_horizontal_offset = cmd->clip_rect.x;
-            call.scissor_vertical_offset = cmd->clip_rect.y;
+            call.scissor_horizontal_offset = std::max(cmd->clip_rect.x, 0.0f);
+            call.scissor_vertical_offset = std::max(cmd->clip_rect.y, 0.0f);
 
             calls.push_back(call);
 
@@ -171,11 +186,17 @@ namespace bpmap
 
     void gui_t::run()
     {
+        nk_clear(&context);
         nk_begin(&context, "bpmap", nk_rect(0,0, window->get_width(), window->get_height()), 0);
 
-        nk_clear(&context);
 
-        if(nk_button_label(&context, "test"))
+        nk_layout_row_dynamic(&context, 50, 5);
+        if (nk_button_label(&context, "button"))
+        {
+
+        }
+        nk_layout_row_dynamic(&context, 50, 5);
+        if (nk_button_label(&context, "button2"))
         {
 
         }

@@ -121,6 +121,11 @@ namespace bpmap
         return error_t::success;
     }
 
+    void vulkan_t::destroy_pipeline_layout(VkPipelineLayout layout) const
+    {
+        vkDestroyPipelineLayout(device, layout, nullptr);
+    }
+
     error_t vulkan_t::create_descriptor_set_layout(
                                                     VkDescriptorSetLayout &layout,
                                                     const VkDescriptorSetLayoutCreateInfo &dslci
@@ -134,6 +139,11 @@ namespace bpmap
         return error_t::success;
     }
 
+    void vulkan_t::destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const
+    {
+        vkDestroyDescriptorSetLayout(device, layout, nullptr);
+    }
+
     error_t vulkan_t::create_descriptor_pool(
                                               VkDescriptorPool &pool,
                                               const VkDescriptorPoolCreateInfo &dpci
@@ -145,6 +155,11 @@ namespace bpmap
         }
 
         return error_t::success;
+    }
+
+    void vulkan_t::destroy_descriptor_pool(VkDescriptorPool pool) const
+    {
+        vkDestroyDescriptorPool(device, pool, nullptr);
     }
 
     error_t vulkan_t::allocate_descriptor_set(
@@ -227,6 +242,11 @@ namespace bpmap
         return error_t::success;
     }
 
+    void vulkan_t::destroy_render_pass(VkRenderPass render_pass) const
+    {
+        vkDestroyRenderPass(device, render_pass, nullptr);
+    }
+
     error_t vulkan_t::create_framebuffers(
                                            darray_t<VkFramebuffer>& framebuffers,
                                            VkFramebufferCreateInfo &fbci
@@ -252,6 +272,14 @@ namespace bpmap
         return error_t::success;
     }
 
+    void vulkan_t::destroy_framebuffers(const darray_t<VkFramebuffer> &framebuffers) const
+    {
+        for(auto framebuffer: framebuffers)
+        {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
+    }
+
     error_t vulkan_t::create_shader( VkShaderModule& shader,
                            const VkShaderModuleCreateInfo& smci
                          ) const
@@ -264,6 +292,10 @@ namespace bpmap
         return error_t::success;
     }
 
+    void vulkan_t::destroy_shader(VkShaderModule shader) const
+    {
+        vkDestroyShaderModule(device, shader, nullptr);
+    }
 
     error_t vulkan_t::create_instance()
     {
@@ -429,7 +461,7 @@ namespace bpmap
         VkCommandPoolCreateInfo cpci = {};
         cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         cpci.queueFamilyIndex = queue_index;
-        cpci.flags = 0;
+        cpci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         cpci.pNext = nullptr;
 
         VkCommandPool pool;
@@ -483,9 +515,43 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::submit_work(const VkSubmitInfo& submit_info) const
+    error_t vulkan_t::create_fence(vk_fence_t &fence) const
     {
-        if(vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE) != VK_SUCCESS)
+        VkFenceCreateInfo fci;
+        fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fci.pNext = nullptr;
+        fci.flags = 0;
+
+        if(vkCreateFence(device, &fci, nullptr, &fence.fence) != VK_SUCCESS)
+        {
+            return error_t::fence_creation_fail;
+        }
+
+        fence.device = device;
+
+        return error_t::success;
+    }
+
+    error_t vulkan_t::wait_for_fence(const vk_fence_t &fence, uint64_t timeout) const
+    {
+        auto status = vkWaitForFences(device, 1, &fence.fence, VK_TRUE, timeout);
+
+        if(status == VK_SUCCESS)
+        {
+            return error_t::success;
+        }
+
+        if(status == VK_TIMEOUT)
+        {
+            return error_t::timeout;
+        }
+
+        return error_t::device_lost;
+    }
+
+    error_t vulkan_t::submit_work(const VkSubmitInfo& submit_info, const vk_fence_t& fence) const
+    {
+        if(vkQueueSubmit(queue, 1, &submit_info, fence.fence) != VK_SUCCESS)
         {
             return error_t::queue_submit_fail;
         }
@@ -520,6 +586,26 @@ namespace bpmap
                              );
 
         return error_t::success;
+    }
+
+    error_t vulkan_t::present_on_screen(uint32_t index, const vk_semaphore_t &wait_semaphore) const
+    {
+        VkPresentInfoKHR present_info = {};
+        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        present_info.pNext = nullptr;
+        present_info.pImageIndices = &index;
+        present_info.swapchainCount = 1;
+        present_info.pSwapchains = &swapchain;
+        present_info.waitSemaphoreCount = 1;
+        present_info.pWaitSemaphores = &wait_semaphore.semaphore;
+        present_info.pResults = nullptr;
+
+        if(vkQueuePresentKHR(queue, &present_info) != VK_SUCCESS)
+        {
+            return error_t::presentation_fail;
+        }
+
+        error_t::success;
     }
 
     error_t vulkan_t::validate_surface_support()
@@ -763,24 +849,74 @@ namespace bpmap
         vmaUnmapMemory(allocator, allocation);
     }
 
+    vk_buffer_t::vk_buffer_t()
+    {
+        allocator = VK_NULL_HANDLE;
+        buffer = VK_NULL_HANDLE;
+    }
+
     vk_buffer_t::~vk_buffer_t()
     {
-        vmaDestroyBuffer(allocator, buffer, allocation);
+        if(allocator != VK_NULL_HANDLE)
+        {
+            vmaDestroyBuffer(allocator, buffer, allocation);
+        }
+    }
+
+    vk_image_t::vk_image_t()
+    {
+        allocator = VK_NULL_HANDLE;
+        image = VK_NULL_HANDLE;
     }
 
     vk_image_t::~vk_image_t()
     {
-        vmaDestroyImage(allocator, image, allocation);
+        if(allocator != VK_NULL_HANDLE)
+        {
+            vmaDestroyImage(allocator, image, allocation);
+        }
+    }
+
+    vk_command_pool_t::vk_command_pool_t()
+    {
+        device = VK_NULL_HANDLE;
+        pool = VK_NULL_HANDLE;
     }
 
     vk_command_pool_t::~vk_command_pool_t()
     {
-        vkDestroyCommandPool(device, pool, nullptr);
+        if(device != VK_NULL_HANDLE)
+        {
+            vkDestroyCommandPool(device, pool, nullptr);
+        }
+    }
+
+    vk_semaphore_t::vk_semaphore_t()
+    {
+        device = VK_NULL_HANDLE;
+        semaphore = VK_NULL_HANDLE;
     }
 
     vk_semaphore_t::~vk_semaphore_t()
     {
-        vkDestroySemaphore(device, semaphore, nullptr);
+        if(device != VK_NULL_HANDLE)
+        {
+            vkDestroySemaphore(device, semaphore, nullptr);
+        }
+    }
+
+    vk_fence_t::vk_fence_t()
+    {
+        device = VK_NULL_HANDLE;
+        fence = VK_NULL_HANDLE;
+    }
+
+    vk_fence_t::~vk_fence_t()
+    {
+        if(device != VK_NULL_HANDLE)
+        {
+            vkDestroyFence(device, fence, nullptr);
+        }
     }
 
 

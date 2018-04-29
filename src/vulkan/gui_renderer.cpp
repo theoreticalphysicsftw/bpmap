@@ -217,7 +217,7 @@ namespace bpmap
         submit_info.pWaitDstStageMask = nullptr;
         submit_info.pWaitSemaphores = nullptr;
 
-        if(vulkan->submit_work(submit_info) != error_t::success)
+        if(vulkan->submit_work(submit_info, vk_fence_t()) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -334,6 +334,7 @@ namespace bpmap
         wds[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[0].pNext = nullptr;
         wds[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        wds[0].descriptorCount = 1;
         wds[0].dstSet = descriptor_set;
         wds[0].dstBinding = 0;
         wds[0].dstArrayElement = 0;
@@ -344,6 +345,7 @@ namespace bpmap
         wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[1].pNext = nullptr;
         wds[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        wds[1].descriptorCount = 1;
         wds[1].dstSet = descriptor_set;
         wds[1].dstBinding = 1;
         wds[1].dstArrayElement = 0;
@@ -397,13 +399,13 @@ namespace bpmap
         prsci.rasterizerDiscardEnable = VK_FALSE;
         prsci.lineWidth = 1.0;
         prsci.cullMode = VK_CULL_MODE_BACK_BIT;
-        prsci.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        prsci.frontFace = VK_FRONT_FACE_CLOCKWISE;
         prsci.polygonMode = VK_POLYGON_MODE_FILL;
 
         VkPipelineMultisampleStateCreateInfo pmsci = {};
         pmsci.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         pmsci.pNext = nullptr;
-        pmsci.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
+        pmsci.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
         VkVertexInputBindingDescription vibd = {};
         vibd.binding = 0;
@@ -518,7 +520,7 @@ namespace bpmap
         attachment_description.flags = 0;
         attachment_description.format = vulkan->get_swapchain_format();
         attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -755,6 +757,8 @@ namespace bpmap
         cbbi.pInheritanceInfo = nullptr;
         cbbi.flags = 0;
 
+        vkResetCommandBuffer(command_buffers[index], 0);
+
         if(vkBeginCommandBuffer(command_buffers[index], &cbbi) != VK_SUCCESS)
         {
             return error_t::command_buffer_begin_fail;
@@ -768,15 +772,18 @@ namespace bpmap
 
         VkRect2D render_area;
         render_area.extent = extent;
-        render_area.offset = offset;
+        render_area.offset = offset;  
+
+        VkClearValue clear_values;
+        clear_values.color = {0.0,0.0,0.0,0.0};
 
         VkRenderPassBeginInfo rpbi = {};
         rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         rpbi.pNext = nullptr;
         rpbi.renderPass = render_pass;
         rpbi.framebuffer = framebuffers[index];
-        rpbi.clearValueCount = 0;
-        rpbi.pClearValues = nullptr;
+        rpbi.clearValueCount = 1;
+        rpbi.pClearValues = &clear_values;
         rpbi.renderArea = render_area;
 
         vkCmdBeginRenderPass(command_buffers[index], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
@@ -830,6 +837,39 @@ namespace bpmap
         }
 
         vkCmdEndRenderPass(command_buffers[index]);
+        vkEndCommandBuffer(command_buffers[index]);
+
+        return error_t::success;
+    }
+
+    error_t gui_renderer_t::submit_command_buffer(uint32_t index)
+    {
+        vk_fence_t done_rendering;
+        vulkan->create_fence(done_rendering);
+
+        VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = nullptr;
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = &image_available.semaphore;
+        submit_info.pWaitDstStageMask = wait_stages;
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = &render_finished.semaphore;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffers[index];
+
+        static constexpr uint64_t timeout = std::numeric_limits<uint64_t>::max();
+
+        vulkan->submit_work(submit_info, done_rendering);
+
+        return vulkan->wait_for_fence(done_rendering, timeout);
+    }
+
+    error_t gui_renderer_t::present_on_screen(uint64_t index)
+    {
+        return vulkan->present_on_screen(index, render_finished);
     }
 
 
@@ -971,10 +1011,21 @@ namespace bpmap
             return status;
         }
 
-        build_command_buffer(fb_index);
-        submit_command_buffer(fb_index);
+        status = build_command_buffer(fb_index);
 
-        return error_t::success;
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = submit_command_buffer(fb_index);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return present_on_screen(fb_index);
     }
 
 
@@ -982,6 +1033,14 @@ namespace bpmap
     {
         vulkan->destroy_sampler(font_sampler);
         vulkan->destroy_image_view(font_view);
+
+        vulkan->destroy_shader(vertex_shader);
+        vulkan->destroy_shader(fragment_shader);
         vulkan->destroy_pipeline(pipeline);
+        vulkan->destroy_pipeline_layout(pipeline_layout);
+        vulkan->destroy_framebuffers(framebuffers);
+        vulkan->destroy_render_pass(render_pass);
+        vulkan->destroy_descriptor_set_layout(descriptor_set_layout);
+        vulkan->destroy_descriptor_pool(descriptor_pool);
     }
 }

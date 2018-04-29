@@ -127,7 +127,16 @@ namespace bpmap
                 return "Failed to map memory!";
 
             case error_t::command_buffer_begin_fail:
-                return "Failed to begin command buffe!";
+                return "Failed to begin command buffer!";
+
+            case error_t::fence_creation_fail:
+                return "Failed to create fence!";
+
+            case error_t::device_lost:
+                return "Lost connection to logical device!";
+
+            case error_t::presentation_fail:
+                return "Failed to present images on screen";
         }
     }
 }

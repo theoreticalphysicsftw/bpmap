@@ -8,6 +8,8 @@ namespace bpmap
     enum class error_t
     {
         success,
+        timeout,
+        device_lost,
         window_creation_fail,
         instance_creation_fail,
         device_search_fail,
@@ -19,6 +21,7 @@ namespace bpmap
         queue_wait_fail,
         queue_submit_fail,
         get_queue_fail,
+        fence_creation_fail,
         command_pool_creation_fail,
         command_buffers_creation_fail,
         surface_creation_fail,
@@ -43,6 +46,7 @@ namespace bpmap
         font_texture_setup_fail,
         memory_mapping_fail,
         command_buffer_begin_fail,
+        presentation_fail,
     };
 
     string_t get_error_message(error_t e);

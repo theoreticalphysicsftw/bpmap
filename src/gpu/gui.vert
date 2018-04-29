@@ -36,6 +36,7 @@ layout(location = 2) in uvec4 vertex_color;
 layout(location = 0) out vec4 fragment_color;
 layout(location = 1) out vec2 fragment_uv;
 
+
 void main()
 {
     gl_Position = projection * vec4(vertex_position, 0.0, 1.0);
