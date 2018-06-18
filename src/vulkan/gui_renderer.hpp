@@ -22,6 +22,7 @@
 #include "core/algebra.hpp"
 #include "core/io.hpp"
 #include "vulkan.hpp"
+#include "renderer.hpp"
 #include "gui/gui.hpp"
 
 namespace bpmap
@@ -58,6 +59,7 @@ namespace bpmap
 
         gui_t* gui;
         const vulkan_t* vulkan;
+        const renderer_t* renderer;
 
         error_t setup_font_texture();
         error_t create_descriptor_sets_layout();
@@ -89,6 +91,7 @@ namespace bpmap
 
         void bind_gui(gui_t& gui);
         void bind_vulkan(const vulkan_t& vulkan);
+        void bind_renderer(const renderer_t& renderer);
 
         error_t init();
 

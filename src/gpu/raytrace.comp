@@ -16,33 +16,10 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef SCENE_HPP
-#define SCENE_HPP
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
 
-#include "common.hpp"
-#include "geometry.hpp"
-#include "lights.hpp"
-#include "material.hpp"
-
-namespace bpmap
+void main(void)
 {
-    struct scene_t
-    {
-        // Holds all the visible objects in the scene each of which references
-        // the segment in the triangles array that holds it's indices and index
-        // to its material.
-        darray_t<visible_object_t> objects;
 
-        // Holds indices to the vertex_attributes array.
-        darray_t<uint32_t> triangles;
-
-        darray_t<vertex_attribute_t> vertex_attributes;
-
-        darray_t<material_t> materials;
-
-        darray_t<light_t> lights;
-    };
 }
-
-
-#endif // SCENE_HPP

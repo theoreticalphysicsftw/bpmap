@@ -47,6 +47,7 @@ namespace bpmap
         memory_mapping_fail,
         command_buffer_begin_fail,
         presentation_fail,
+        compute_kernel_read_fail,
     };
 
     string_t get_error_message(error_t e);

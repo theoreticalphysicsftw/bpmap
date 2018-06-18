@@ -65,6 +65,7 @@ namespace bpmap
 
         void init_font_atlas();
 
+        void set_style();
 
     public:
         gui_t();
@@ -87,8 +88,8 @@ namespace bpmap
 
         darray_t<draw_call_t> emit_draw_calls();
 
-        size_t get_width() const {window->get_width();}
-        size_t get_height() const {window->get_height();}
+        size_t get_width() const {return window->get_width();}
+        size_t get_height() const {return window->get_height();}
 
         void get_input();
         void run();

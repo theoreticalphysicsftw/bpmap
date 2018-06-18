@@ -354,6 +354,8 @@ namespace bpmap
         wds[1].pTexelBufferView = nullptr;
 
         vulkan->update_descriptor_sets(wds, 2);
+
+        return error_t::success;
     }
 
 
@@ -507,7 +509,7 @@ namespace bpmap
         gpci.pColorBlendState = &pcbsci;
         gpci.pDynamicState = &pdsci;
         gpci.renderPass = render_pass;
-        gpci.subpass = 0;
+        gpci.subpass = 1;
         gpci.layout = pipeline_layout;
 
         return vulkan->create_graphics_pipeline(pipeline, gpci);
@@ -520,7 +522,7 @@ namespace bpmap
         attachment_description.flags = 0;
         attachment_description.format = vulkan->get_swapchain_format();
         attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -531,17 +533,37 @@ namespace bpmap
         attachment_reference.attachment = 0;
         attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        VkSubpassDescription subpass = {};
-        subpass.flags = 0;
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.inputAttachmentCount = 0;
-        subpass.pInputAttachments = nullptr;
-        subpass.preserveAttachmentCount = 0;
-        subpass.pPreserveAttachments = nullptr;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &attachment_reference;
-        subpass.pDepthStencilAttachment = nullptr;
-        subpass.pResolveAttachments = nullptr;
+        VkSubpassDescription subpasses[2];
+        subpasses[0].flags = 0;
+        subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpasses[0].inputAttachmentCount = 0;
+        subpasses[0].pInputAttachments = nullptr;
+        subpasses[0].preserveAttachmentCount = 0;
+        subpasses[0].pPreserveAttachments = nullptr;
+        subpasses[0].colorAttachmentCount = 1;
+        subpasses[0].pColorAttachments = &attachment_reference;
+        subpasses[0].pDepthStencilAttachment = nullptr;
+        subpasses[0].pResolveAttachments = nullptr;
+
+        subpasses[1].flags = 0;
+        subpasses[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpasses[1].inputAttachmentCount = 0;
+        subpasses[1].pInputAttachments = nullptr;
+        subpasses[1].preserveAttachmentCount = 0;
+        subpasses[1].pPreserveAttachments = nullptr;
+        subpasses[1].colorAttachmentCount = 1;
+        subpasses[1].pColorAttachments = &attachment_reference;
+        subpasses[1].pDepthStencilAttachment = nullptr;
+        subpasses[1].pResolveAttachments = nullptr;
+
+        VkSubpassDependency dependencies = {};
+        dependencies.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        dependencies.srcSubpass = 0;
+        dependencies.dstSubpass = 1;
+        dependencies.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependencies.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependencies.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencies.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 
         VkRenderPassCreateInfo rpci = {};
         rpci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -549,10 +571,10 @@ namespace bpmap
         rpci.flags = 0;
         rpci.attachmentCount = 1;
         rpci.pAttachments = &attachment_description;
-        rpci.subpassCount = 1;
-        rpci.pSubpasses = &subpass;
-        rpci.dependencyCount = 0;
-        rpci.pDependencies = nullptr;
+        rpci.subpassCount = 2;
+        rpci.pSubpasses = subpasses;
+        rpci.dependencyCount = 1;
+        rpci.pDependencies = &dependencies;
 
         return vulkan->create_renederpass(render_pass, rpci);
     }
@@ -774,19 +796,21 @@ namespace bpmap
         render_area.extent = extent;
         render_area.offset = offset;  
 
-        VkClearValue clear_values;
-        clear_values.color = {0.0,0.0,0.0,0.0};
+        // VkClearValue clear_values;
+        // clear_values.color = {0.0,0.0,0.0,0.0};
 
         VkRenderPassBeginInfo rpbi = {};
         rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         rpbi.pNext = nullptr;
         rpbi.renderPass = render_pass;
         rpbi.framebuffer = framebuffers[index];
-        rpbi.clearValueCount = 1;
-        rpbi.pClearValues = &clear_values;
+        rpbi.clearValueCount = 0;
+        rpbi.pClearValues = nullptr;
         rpbi.renderArea = render_area;
 
         vkCmdBeginRenderPass(command_buffers[index], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdNextSubpass(command_buffers[index], VK_SUBPASS_CONTENTS_INLINE);
 
         VkViewport viewport;
         viewport.height = gui->get_height();
@@ -882,6 +906,11 @@ namespace bpmap
     void gui_renderer_t::bind_vulkan(const vulkan_t &vk)
     {
         vulkan = &vk;
+    }
+
+    void gui_renderer_t::bind_renderer(const renderer_t& r)
+    {
+        renderer = &r;
     }
 
 

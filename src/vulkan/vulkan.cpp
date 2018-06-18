@@ -224,6 +224,29 @@ namespace bpmap
         return error_t::success;
     }
 
+    error_t vulkan_t::create_compute_pipelines(
+                                               darray_t<VkPipeline>& pipelines,
+                                               const darray_t<VkComputePipelineCreateInfo>& cpci
+                                             ) const
+    {
+        if(
+            vkCreateComputePipelines(
+                                      device,
+                                      VK_NULL_HANDLE,
+                                      pipelines.size(),
+                                      cpci.data(),
+                                      nullptr,
+                                      pipelines.data()
+                                    )
+             != VK_SUCCESS
+           )
+        {
+            return error_t::pipeline_creation_fail;
+        }
+
+        return error_t::success;
+    }
+
     void vulkan_t::destroy_pipeline(VkPipeline pipeline) const
     {
         vkDestroyPipeline(device, pipeline, nullptr);
@@ -605,7 +628,7 @@ namespace bpmap
             return error_t::presentation_fail;
         }
 
-        error_t::success;
+        return error_t::success;
     }
 
     error_t vulkan_t::validate_surface_support()
@@ -658,6 +681,8 @@ namespace bpmap
 
         swapchain_image_format = formats[0].format;
         swapchain_color_space = formats[0].colorSpace;
+
+        return error_t::success;
     }
 
     error_t vulkan_t::pick_present_mode()
@@ -842,6 +867,8 @@ namespace bpmap
         {
             return error_t::memory_mapping_fail;
         }
+
+        return error_t::success;
     }
 
     void vk_buffer_t::unmap()

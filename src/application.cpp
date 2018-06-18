@@ -31,12 +31,22 @@ namespace bpmap
         {
             error = vulkan.init(window);
             gui.bind_window(window);
-            gui_renderer.bind_gui(gui);
-            gui_renderer.bind_vulkan(vulkan);
+
+            renderer.bind_vulkan(vulkan);
 
             if(error == error_t::success)
             {
-                 error = gui_renderer.init();
+                error = renderer.init();
+
+
+                gui_renderer.bind_gui(gui);
+                gui_renderer.bind_vulkan(vulkan);
+                gui_renderer.bind_renderer(renderer);
+
+                if(error == error_t::success)
+                {
+                     error = gui_renderer.init();
+                }
             }
         }
 

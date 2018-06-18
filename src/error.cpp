@@ -102,6 +102,9 @@ namespace bpmap
             case error_t::vertex_shader_read_fail:
                 return "Failed to read vertex shader!";
 
+            case error_t::compute_kernel_read_fail:
+                return "Failed to read compute kernel!";
+
             case error_t::fragment_shader_read_fail:
                 return "Failed to read fragment shader!";
 
@@ -137,6 +140,9 @@ namespace bpmap
 
             case error_t::presentation_fail:
                 return "Failed to present images on screen";
+
+            default:
+                return "Unknown error occured";
         }
     }
 }

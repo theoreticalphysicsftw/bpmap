@@ -35,14 +35,7 @@ namespace bpmap
         // Parametrization coordinates
         float_t u;
         float_t v;
-    };
-
-    // A collection of visible objects
-    struct aggregate_object_t
-    {
-        uint32_t first_object;
-        uint32_t objects_count;
-
+        uint32_t material_id;
     };
 
     // A collection of primitives all of the same type that share the same

@@ -154,6 +154,11 @@ namespace bpmap
                                           const VkGraphicsPipelineCreateInfo& gpci
                                         ) const;
 
+        error_t create_compute_pipelines(
+                                          darray_t<VkPipeline>& pipeline,
+                                          const darray_t<VkComputePipelineCreateInfo>& cpci
+                                        ) const;
+
         void destroy_pipeline(VkPipeline) const;
 
         error_t create_renederpass(
