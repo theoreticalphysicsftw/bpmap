@@ -80,7 +80,12 @@ namespace bpmap
             return status;
         }
 
+        status = create_image();
 
+        if(status != error_t::success)
+        {
+            return status;
+        }
 
         return error_t::success;
     }
@@ -262,7 +267,7 @@ namespace bpmap
         vkCmdPipelineBarrier(
                               tmp_buffer,
                               VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                              VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                              VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
                               0,
                               0,
                               nullptr,
@@ -307,8 +312,14 @@ namespace bpmap
         ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ivci.subresourceRange = isr;
         ivci.image = render_output.image;
+        ivci.components = {
+                            VK_COMPONENT_SWIZZLE_R,
+                            VK_COMPONENT_SWIZZLE_G,
+                            VK_COMPONENT_SWIZZLE_B,
+                            VK_COMPONENT_SWIZZLE_A
+                           };
 
-        if(vulkan->create_image_view(render_output_view,ivci) != error_t::success)
+        if(vulkan->create_image_view(render_output_view, ivci) != error_t::success)
         {
             return error_t::render_output_setup_fail;
         }
@@ -320,8 +331,8 @@ namespace bpmap
         sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sci.anisotropyEnable = VK_TRUE;
-        sci.maxAnisotropy = 16;
+        sci.anisotropyEnable = VK_FALSE;
+        sci.maxAnisotropy = 1;
         sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         sci.mipLodBias = 0.0;
         sci.compareEnable = VK_FALSE;
@@ -341,6 +352,8 @@ namespace bpmap
 
     renderer_t::~renderer_t()
     {
+        vulkan->destroy_image_view(render_output_view);
+        vulkan->destroy_sampler(render_output_sampler);
         vulkan->destroy_shader(raytrace);
         vulkan->destroy_descriptor_pool(descriptor_pool);
         vulkan->destroy_descriptor_set_layout(descriptor_set_layout);

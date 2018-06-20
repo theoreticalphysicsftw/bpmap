@@ -30,11 +30,13 @@ namespace bpmap
     class gui_renderer_t
     {
         VkPipeline pipeline;
+        VkPipeline render_output_pipeline;
         VkPipelineLayout pipeline_layout;
         VkRenderPass render_pass;
         VkDescriptorSetLayout descriptor_set_layout;
         VkDescriptorPool descriptor_pool;
         VkDescriptorSet descriptor_set;
+        VkDescriptorSet render_output_descriptor_set;
         darray_t<VkFramebuffer> framebuffers;
 
         vk_command_pool_t command_pool;
@@ -43,6 +45,8 @@ namespace bpmap
         vk_semaphore_t image_available;
         vk_semaphore_t render_finished;
 
+        VkShaderModule render_output_vertex_shader;
+        VkShaderModule render_output_fragment_shader;
         VkShaderModule vertex_shader;
         VkShaderModule fragment_shader;
 
@@ -85,6 +89,8 @@ namespace bpmap
     public:
         static constexpr const char_t* vertex_shader_path = "gui.vert.spv";
         static constexpr const char_t* fragment_shader_path = "gui.frag.spv";
+        static constexpr const char_t* render_output_vertex_shader_path = "render_output.vert.spv";
+        static constexpr const char_t* render_output_fragment_shader_path = "render_output.frag.spv";
 
         static constexpr uint32_t max_gui_ibuffer_size = 1 << 16;
         static constexpr uint32_t max_gui_vbuffer_size = 1 << 20;

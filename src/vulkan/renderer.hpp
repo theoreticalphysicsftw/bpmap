@@ -17,8 +17,6 @@ namespace bpmap
         VkShaderModule raytrace;
 
         vk_image_t render_output;
-        VkImageView render_output_view;
-        VkSampler render_output_sampler;
 
         vk_fence_t render_finished;
 
@@ -61,6 +59,9 @@ namespace bpmap
 
         error_t build_command_buffers();
         error_t submit_command_buffers();
+
+        VkImageView render_output_view;
+        VkSampler render_output_sampler;
 
         ~renderer_t();
     };

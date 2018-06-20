@@ -42,8 +42,8 @@ namespace bpmap
 
     struct scene_settings_t
     {
-        float_t resolution_x;
-        float_t resolution_y;
+        float_t resolution_x = 1920;
+        float_t resolution_y = 1080;
     };
 
     struct scene_t

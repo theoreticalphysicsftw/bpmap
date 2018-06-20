@@ -178,7 +178,7 @@ namespace bpmap
 
     error_t vulkan_t::create_image_view(VkImageView &image_view, VkImageViewCreateInfo &ivci) const
     {
-        if(vkCreateImageView(device, &ivci, nullptr,&image_view) != VK_SUCCESS)
+        if(vkCreateImageView(device, &ivci, nullptr, &image_view) != VK_SUCCESS)
         {
             return error_t::image_view_creation_fail;
         }

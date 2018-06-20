@@ -234,8 +234,15 @@ namespace bpmap
         ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ivci.subresourceRange = isr;
         ivci.image = font_image.image;
+        /*ivci.components = {
+                            VK_COMPONENT_SWIZZLE_R,
+                            VK_COMPONENT_SWIZZLE_G,
+                            VK_COMPONENT_SWIZZLE_B,
+                            VK_COMPONENT_SWIZZLE_A
+                           };*/
 
-        if(vulkan->create_image_view(font_view,ivci) != error_t::success)
+
+        if(vulkan->create_image_view(font_view, ivci) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -314,7 +321,16 @@ namespace bpmap
         dsai.pSetLayouts = &descriptor_set_layout;
         dsai.descriptorPool = descriptor_pool;
 
-        return vulkan->allocate_descriptor_set(descriptor_set, dsai);
+        auto status = vulkan->allocate_descriptor_set(descriptor_set, dsai);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return status;
+
+        //return vulkan->allocate_descriptor_set(render_output_descriptor_set, dsai);
     }
 
     error_t gui_renderer_t::update_descriptor_sets()
@@ -328,6 +344,11 @@ namespace bpmap
         font_texture_bind_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         font_texture_bind_info.imageView = font_view;
         font_texture_bind_info.sampler = font_sampler;
+
+        VkDescriptorImageInfo render_output_bind_info = {};
+        font_texture_bind_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        font_texture_bind_info.imageView = renderer->render_output_view;
+        font_texture_bind_info.sampler = renderer->render_output_sampler;
 
         VkWriteDescriptorSet wds[2] = {};
 
@@ -352,6 +373,13 @@ namespace bpmap
         wds[1].pBufferInfo = nullptr;
         wds[1].pImageInfo = &font_texture_bind_info;
         wds[1].pTexelBufferView = nullptr;
+
+        //vulkan->update_descriptor_sets(wds, 2);
+
+        //wds[0].dstSet = render_output_descriptor_set;
+        //wds[1].dstSet = render_output_descriptor_set;
+        //wds[1].pImageInfo = &render_output_bind_info;
+
 
         vulkan->update_descriptor_sets(wds, 2);
 
@@ -512,7 +540,21 @@ namespace bpmap
         gpci.subpass = 1;
         gpci.layout = pipeline_layout;
 
-        return vulkan->create_graphics_pipeline(pipeline, gpci);
+        auto status = vulkan->create_graphics_pipeline(pipeline, gpci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        pssci[0].module = render_output_vertex_shader;
+        pssci[1].module = render_output_fragment_shader;
+        gpci.subpass = 0;
+
+        pvisci.vertexBindingDescriptionCount = 0;
+        pvisci.vertexAttributeDescriptionCount = 0;
+
+        return vulkan->create_graphics_pipeline(render_output_pipeline, gpci);
     }
 
 
@@ -596,6 +638,8 @@ namespace bpmap
     {
         std::vector<uint8_t> vertex_shader_data;
         std::vector<uint8_t> fragment_shader_data;
+        std::vector<uint8_t> render_output_vertex_shader_data;
+        std::vector<uint8_t> render_output_fragment_shader_data;
 
         if(!read_whole_file(vertex_shader_path, vertex_shader_data))
         {
@@ -603,6 +647,16 @@ namespace bpmap
         }
 
         if(!read_whole_file(fragment_shader_path, fragment_shader_data))
+        {
+            return error_t::fragment_shader_read_fail;
+        }
+
+        if(!read_whole_file(render_output_vertex_shader_path, render_output_vertex_shader_data))
+        {
+            return error_t::vertex_shader_read_fail;
+        }
+
+        if(!read_whole_file(render_output_fragment_shader_path, render_output_fragment_shader_data))
         {
             return error_t::fragment_shader_read_fail;
         }
@@ -628,7 +682,34 @@ namespace bpmap
             return status;
         }
 
-        return vulkan->create_shader(fragment_shader, fragment_smci);
+        status = vulkan->create_shader(fragment_shader, fragment_smci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        vertex_smci.codeSize = render_output_vertex_shader_data.size();
+        vertex_smci.pCode = (uint32_t*) render_output_vertex_shader_data.data();
+
+        fragment_smci.codeSize = render_output_fragment_shader_data.size();
+        fragment_smci.pCode = (uint32_t*) render_output_fragment_shader_data.data();
+
+        status = vulkan->create_shader(render_output_vertex_shader, vertex_smci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = vulkan->create_shader(render_output_fragment_shader, fragment_smci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        return error_t::success;
     }
 
     error_t gui_renderer_t::create_command_pool()
@@ -808,10 +889,6 @@ namespace bpmap
         rpbi.pClearValues = nullptr;
         rpbi.renderArea = render_area;
 
-        vkCmdBeginRenderPass(command_buffers[index], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-
-        vkCmdNextSubpass(command_buffers[index], VK_SUBPASS_CONTENTS_INLINE);
-
         VkViewport viewport;
         viewport.height = gui->get_height();
         viewport.width = gui->get_width();
@@ -819,6 +896,32 @@ namespace bpmap
         viewport.y = 0.0;
         viewport.minDepth = 0.0;
         viewport.maxDepth = 1.0;
+
+
+        vkCmdBeginRenderPass(command_buffers[index], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+        /*
+        vkCmdBindPipeline(command_buffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS, render_output_pipeline);
+
+        vkCmdBindDescriptorSets(
+                                 command_buffers[index],
+                                 VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                 pipeline_layout,
+                                 0,
+                                 1,
+                                 &descriptor_set,
+                                 0,
+                                 nullptr
+                                );
+
+        vkCmdSetScissor(command_buffers[index], 0, 1, &render_area);
+        vkCmdSetViewport(command_buffers[index], 0, 1, &viewport);
+
+        vkCmdDraw(command_buffers[index], 6, 1, 0, 0);
+        */
+
+        // Draw Gui
+
+        vkCmdNextSubpass(command_buffers[index], VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdSetViewport(command_buffers[index], 0, 1, &viewport);
 
@@ -1065,7 +1168,10 @@ namespace bpmap
 
         vulkan->destroy_shader(vertex_shader);
         vulkan->destroy_shader(fragment_shader);
+        vulkan->destroy_shader(render_output_vertex_shader);
+        vulkan->destroy_shader(render_output_fragment_shader);
         vulkan->destroy_pipeline(pipeline);
+        vulkan->destroy_pipeline(render_output_pipeline);
         vulkan->destroy_pipeline_layout(pipeline_layout);
         vulkan->destroy_framebuffers(framebuffers);
         vulkan->destroy_render_pass(render_pass);
