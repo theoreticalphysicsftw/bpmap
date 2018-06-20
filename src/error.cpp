@@ -147,6 +147,9 @@ namespace bpmap
             case error_t::objects_load_fail:
                 return "Failed to load objects in the scene!";
 
+            case error_t::render_output_setup_fail:
+                return "Failed to setup render output!";
+
             default:
                 return "Unknown error occured";
         }

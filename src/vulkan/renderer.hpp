@@ -16,7 +16,7 @@ namespace bpmap
 
         VkShaderModule raytrace;
 
-        VkImage render_output;
+        vk_image_t render_output;
         VkImageView render_output_view;
         VkSampler render_output_sampler;
 
@@ -47,6 +47,7 @@ namespace bpmap
         error_t create_command_pool();
         error_t create_command_buffers();
         error_t create_synchronization_primitives();
+        error_t create_image();
 
     public:
         static constexpr const char* raytrace_kernel_path = "raytrace.comp.spv";

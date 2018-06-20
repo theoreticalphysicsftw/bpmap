@@ -73,6 +73,15 @@ namespace bpmap
             return status;
         }
 
+        status = create_synchronization_primitives();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+
+
         return error_t::success;
     }
 
@@ -170,6 +179,164 @@ namespace bpmap
     error_t renderer_t::create_synchronization_primitives()
     {
         return vulkan->create_fence(render_finished);
+    }
+
+    error_t renderer_t::create_image()
+    {
+        VkExtent3D extent = {};
+        extent.height = scene->settings.resolution_y;
+        extent.width = scene->settings.resolution_x;
+        extent.depth = 1;
+
+        VkImageCreateInfo ici = {};
+        ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        ici.pNext = nullptr;
+        ici.flags = 0;
+        ici.imageType = VK_IMAGE_TYPE_2D;
+        ici.arrayLayers = 1;
+        ici.mipLevels = 1;
+        ici.samples = VK_SAMPLE_COUNT_1_BIT;
+        ici.format = VK_FORMAT_R8G8B8A8_UNORM;
+        ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        ici.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        ici.pQueueFamilyIndices = nullptr;
+        ici.queueFamilyIndexCount = 0;
+        ici.extent = extent;
+
+        VmaAllocationCreateInfo aci = {};
+        aci.pool = VK_NULL_HANDLE;
+        aci.flags = 0;
+        aci.preferredFlags = 0;
+        aci.requiredFlags = 0;
+        aci.pUserData = nullptr;
+        aci.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        if(vulkan->create_image(render_output, ici, aci) != error_t::success)
+        {
+            return error_t::render_output_setup_fail;
+        }
+
+        VkCommandBuffer tmp_buffer;
+
+        VkCommandBufferAllocateInfo cbai = {};
+        cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cbai.pNext = nullptr;
+        cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cbai.commandPool = command_pool.pool;
+        cbai.commandBufferCount = 1;
+
+        vulkan->create_command_buffers(&tmp_buffer, cbai);
+
+        VkCommandBufferBeginInfo cbbi = {};
+        cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cbbi.pNext = nullptr;
+        cbbi.pInheritanceInfo = nullptr;
+        cbbi.flags = 0;
+
+        if(vkBeginCommandBuffer(tmp_buffer, &cbbi))
+        {
+            return error_t::render_output_setup_fail;
+        }
+
+        VkImageSubresourceRange isr = {};
+        isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        isr.baseArrayLayer = 0;
+        isr.baseMipLevel = 0;
+        isr.layerCount = 1;
+        isr.levelCount = 1;
+
+        VkImageMemoryBarrier layout_barrier = {};
+        layout_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        layout_barrier.pNext = nullptr;
+        layout_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        layout_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        layout_barrier.image = render_output.image;
+        layout_barrier.srcAccessMask = 0;
+        layout_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        layout_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        layout_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        layout_barrier.subresourceRange = isr;
+
+        vkCmdPipelineBarrier(
+                              tmp_buffer,
+                              VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                              VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                              0,
+                              0,
+                              nullptr,
+                              0,
+                              nullptr,
+                              1,
+                              &layout_barrier
+                            );
+
+        vkEndCommandBuffer(tmp_buffer);
+
+        VkSubmitInfo submit_info = {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = nullptr;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &tmp_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.pSignalSemaphores = nullptr;
+        submit_info.waitSemaphoreCount = 0;
+        submit_info.pWaitDstStageMask = nullptr;
+        submit_info.pWaitSemaphores = nullptr;
+
+        vk_fence_t tmp_fence;
+        vulkan->create_fence(tmp_fence);
+
+        if(vulkan->submit_work(submit_info, tmp_fence) != error_t::success)
+        {
+            return error_t::render_output_setup_fail;
+        }
+
+        auto timeout = std::numeric_limits<uint64_t>::max();
+
+        vulkan->wait_for_fence(tmp_fence, timeout);
+
+        // Create View and Sampler.
+
+        VkImageViewCreateInfo ivci = {};
+        ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        ivci.pNext = nullptr;
+        ivci.flags = 0;
+        ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+        ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ivci.subresourceRange = isr;
+        ivci.image = render_output.image;
+
+        if(vulkan->create_image_view(render_output_view,ivci) != error_t::success)
+        {
+            return error_t::render_output_setup_fail;
+        }
+
+        VkSamplerCreateInfo sci = {};
+        sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sci.pNext = nullptr;
+        sci.flags = 0;
+        sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sci.anisotropyEnable = VK_TRUE;
+        sci.maxAnisotropy = 16;
+        sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        sci.mipLodBias = 0.0;
+        sci.compareEnable = VK_FALSE;
+        sci.minFilter = VK_FILTER_LINEAR;
+        sci.magFilter = VK_FILTER_LINEAR;
+        sci.minLod = 0.0;
+        sci.maxLod = 0.0;
+        sci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+
+        if(vulkan->create_sampler(render_output_sampler, sci) != error_t::success)
+        {
+            return error_t::render_output_setup_fail;
+        }
+
+        return error_t::success;
     }
 
     renderer_t::~renderer_t()
