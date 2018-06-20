@@ -25,16 +25,17 @@
 
 namespace bpmap
 {
-    // This class contains vertex attributes. The naming matches triangle data,
-    // however different primitives can interpret the same memory in different
-    // ways.
-    struct vertex_attribute_t
+
+    struct attribute_index_t
     {
-        point3d_t vertex;
-        codirection3d_t normal;
-        // Parametrization coordinates
-        float_t u;
-        float_t v;
+        uint32_t vertex_index;
+        uint32_t normal_index;
+        uint32_t texcoord_index;
+    };
+
+    struct triangle_t
+    {
+        attribute_index_t vertices[3];
         uint32_t material_id;
     };
 
@@ -42,9 +43,9 @@ namespace bpmap
     // material.
     struct visible_object_t
     {
-        uint64_t first_primitive;
-        uint64_t primitives_count;
-        uint64_t material_idx;
+        uint32_t first_primitive;
+        uint32_t primitives_count;
+        uint32_t material_idx;
     };
 
 }

@@ -139,7 +139,13 @@ namespace bpmap
                 return "Lost connection to logical device!";
 
             case error_t::presentation_fail:
-                return "Failed to present images on screen";
+                return "Failed to present images on screen!";
+
+            case error_t::scene_settings_read_fail:
+                return "Failed to read screen settings!";
+
+            case error_t::objects_load_fail:
+                return "Failed to load objects in the scene!";
 
             default:
                 return "Unknown error occured";

@@ -3,11 +3,11 @@
 
 #include "scene.hpp"
 #include <common.hpp>
-
+#include <error.hpp>
 
 namespace bpmap
 {
-    bool load_scene(const string_t& path, scene_t& scene);
+    error_t load_scene(const string_t& path, scene_t& scene);
 }
 
 #endif // SCENE_LOADER_HPP

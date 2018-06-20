@@ -19,13 +19,33 @@
 #ifndef SCENE_HPP
 #define SCENE_HPP
 
-#include "common.hpp"
+#include <algebra.hpp>
+#include <common.hpp>
+
 #include "geometry.hpp"
 #include "lights.hpp"
 #include "material.hpp"
 
 namespace bpmap
 {
+    struct camera_t
+    {
+        direction3d_t up;
+        direction3d_t left;
+        direction3d_t front;
+        point3d_t origin;
+
+        float_t aspect_ratio;
+        float_t near;
+        float_t far;
+    };
+
+    struct scene_settings_t
+    {
+        float_t resolution_x;
+        float_t resolution_y;
+    };
+
     struct scene_t
     {
         // Holds all the visible objects in the scene each of which references
@@ -33,14 +53,18 @@ namespace bpmap
         // to its material.
         darray_t<visible_object_t> objects;
 
-        // Holds indices to the vertex_attributes array.
-        darray_t<uint32_t> triangles;
+        darray_t<triangle_t> triangles;
 
-        darray_t<vertex_attribute_t> vertex_attributes;
+        darray_t<point3d_t> vertices;
+        darray_t<codirection3d_t> normals;
+        darray_t<point2d_t> texcoords;
 
         darray_t<material_t> materials;
 
         darray_t<light_t> lights;
+
+        camera_t camera;
+        scene_settings_t settings;
     };
 }
 

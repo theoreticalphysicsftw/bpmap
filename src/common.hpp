@@ -28,6 +28,7 @@
 #include <cstring>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <array>
 #include <variant>
 #include <utility>
@@ -63,6 +64,9 @@ namespace bpmap
 
     template<typename K, typename V>
     using hash_table_t = std::unordered_map<K,V>;
+
+    template<typename T>
+    using hash_set_t = std::unordered_set<T>;
 
     constexpr const char_t* app_name = "bpmap";
 }

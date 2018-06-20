@@ -10,6 +10,11 @@ namespace bpmap
         vulkan = &vk;
     }
 
+    void renderer_t::bind_scene(const scene_t& s)
+    {
+        scene = &s;
+    }
+
     error_t renderer_t::init()
     {
         auto status = create_shaders();
@@ -40,7 +45,7 @@ namespace bpmap
             return status;
         }
 
-        status = create_compute_pipeline_layout();
+        status = create_compute_pipeline_layouts();
 
         if(status != error_t::success)
         {
@@ -54,7 +59,117 @@ namespace bpmap
             return status;
         }
 
+        status = create_command_pool();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_command_buffers();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
         return error_t::success;
+    }
+
+    bool_t renderer_t::is_not_busy()
+    {
+        if(!busy)
+        {
+            return true;
+        }
+
+
+        if(vulkan->wait_for_fence(render_finished, 0) == error_t::success)
+        {
+            busy = false;
+        }
+
+        return !busy;
+    }
+
+    error_t renderer_t::build_command_buffers()
+    {
+        VkCommandBufferBeginInfo cbbi = {};
+        cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cbbi.pNext = nullptr;
+        cbbi.pInheritanceInfo = nullptr;
+        cbbi.flags = 0;
+
+        vkResetCommandBuffer(command_buffer, 0);
+
+        if(vkBeginCommandBuffer(command_buffer, &cbbi) != VK_SUCCESS)
+        {
+            return error_t::command_buffer_begin_fail;
+        }
+
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE,compute_pipelines[raytrace_pipeline]);
+
+        vkCmdBindDescriptorSets(
+                                  command_buffer,
+                                  VK_PIPELINE_BIND_POINT_COMPUTE,
+                                  compute_pipeline_layouts[raytrace_pipeline],
+                                  0,
+                                  1,
+                                  &descriptor_set,
+                                  0,
+                                  nullptr
+                                );
+
+        vkCmdDispatch(command_buffer,scene->settings.resolution_x/16, scene->settings.resolution_y/16, 1);
+
+        vkEndCommandBuffer(command_buffer);
+
+        return error_t::success;
+    }
+
+    error_t renderer_t::submit_command_buffers()
+    {
+        if(is_not_busy())
+        {
+            VkSubmitInfo submit_info = {};
+            submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit_info.pNext = nullptr;
+            submit_info.waitSemaphoreCount = 0;
+            submit_info.pWaitSemaphores = nullptr;
+            submit_info.pWaitDstStageMask = nullptr;
+            submit_info.signalSemaphoreCount = 0;
+            submit_info.pSignalSemaphores = nullptr;
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = &command_buffer;
+
+            auto status = vulkan->submit_work(submit_info, render_finished);
+
+            if(status != error_t::success)
+            {
+                return status;
+            }
+
+            busy = true;
+        }
+
+        return error_t::success;
+    }
+
+    error_t renderer_t::create_command_buffers()
+    {
+        VkCommandBufferAllocateInfo cbai = {};
+        cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cbai.pNext = nullptr;
+        cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cbai.commandPool = command_pool.pool;
+        cbai.commandBufferCount = 1;
+
+        return vulkan->create_command_buffers(&command_buffer, cbai);
+    }
+
+    error_t renderer_t::create_synchronization_primitives()
+    {
+        return vulkan->create_fence(render_finished);
     }
 
     renderer_t::~renderer_t()
@@ -62,7 +177,7 @@ namespace bpmap
         vulkan->destroy_shader(raytrace);
         vulkan->destroy_descriptor_pool(descriptor_pool);
         vulkan->destroy_descriptor_set_layout(descriptor_set_layout);
-        vulkan->destroy_pipeline_layout(compute_pipeline_layout);
+        vulkan->destroy_pipeline_layout(compute_pipeline_layouts[raytrace_pipeline]);
         vulkan->destroy_pipeline(compute_pipelines[raytrace_pipeline]);
     }
 
@@ -149,8 +264,10 @@ namespace bpmap
         return vulkan->create_descriptor_pool(descriptor_pool, dpci);
     }
 
-    error_t renderer_t::create_compute_pipeline_layout()
+    error_t renderer_t::create_compute_pipeline_layouts()
     {
+        compute_pipeline_layouts.resize(pipeline_count);
+
         VkPipelineLayoutCreateInfo plci = {};
         plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         plci.pNext = nullptr;
@@ -160,7 +277,7 @@ namespace bpmap
         plci.setLayoutCount = 1;
         plci.pSetLayouts = &descriptor_set_layout;
 
-        return vulkan->create_pipeline_layout(compute_pipeline_layout, plci);
+        return vulkan->create_pipeline_layout(compute_pipeline_layouts[raytrace_pipeline], plci);
     }
 
     error_t renderer_t::create_compute_pipelines()
@@ -184,11 +301,17 @@ namespace bpmap
         cpci[raytrace_pipeline].pNext = nullptr;
         cpci[raytrace_pipeline].flags = 0;
         cpci[raytrace_pipeline].stage = pssci[raytrace_pipeline];
-        cpci[raytrace_pipeline].layout = compute_pipeline_layout;
+        cpci[raytrace_pipeline].layout = compute_pipeline_layouts[raytrace_pipeline];
         cpci[raytrace_pipeline].basePipelineHandle = VK_NULL_HANDLE;
         cpci[raytrace_pipeline].basePipelineIndex = 0;
 
         return vulkan->create_compute_pipelines(compute_pipelines, cpci);
     }
+
+    error_t renderer_t::create_command_pool()
+    {
+        return vulkan->create_command_pool(command_pool);
+    }
+
 
 }

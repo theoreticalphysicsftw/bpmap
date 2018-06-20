@@ -121,6 +121,19 @@ namespace bpmap
 
             return result;
         }
+
+        template<bool covariant>
+        operator vector_t<T, size, covariant>()
+        {
+            vector_t<T, size, covariant> result;
+
+            for(auto i = 0u; i < size; ++i)
+            {
+                result.components[i] = components[i];
+            }
+
+            return result;
+        }
     };
 
     using point3d_embedded_t = point_t<float_t, 4>;

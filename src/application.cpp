@@ -33,6 +33,7 @@ namespace bpmap
             gui.bind_window(window);
 
             renderer.bind_vulkan(vulkan);
+            renderer.bind_scene(scene);
 
             if(error == error_t::success)
             {
@@ -50,6 +51,8 @@ namespace bpmap
             }
         }
 
+        renderer.build_command_buffers();
+        renderer.submit_command_buffers();
     }
 
     void application_t::loop()

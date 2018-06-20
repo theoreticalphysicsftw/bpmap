@@ -24,6 +24,8 @@
 #include "vulkan/renderer.hpp"
 #include "vulkan/gui_renderer.hpp"
 #include "gui/gui.hpp"
+#include "scene/scene.hpp"
+#include "scene/scene_loader.hpp"
 
 namespace bpmap
 {
@@ -35,6 +37,7 @@ namespace bpmap
         gui_renderer_t gui_renderer;
         window_t window;
         gui_t gui;
+        scene_t scene;
 
         error_t error;
 

@@ -48,6 +48,8 @@ namespace bpmap
         command_buffer_begin_fail,
         presentation_fail,
         compute_kernel_read_fail,
+        scene_settings_read_fail,
+        objects_load_fail,
     };
 
     string_t get_error_message(error_t e);
