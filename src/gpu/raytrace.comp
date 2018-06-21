@@ -22,6 +22,84 @@
 layout (set = 0, binding = 1, rgba32f) uniform writeonly image2D render_output;
 layout (local_size_x = 8, local_size_y = 8) in;
 
+struct camera_t
+{
+    vec3 up;
+    vec3 left;
+    vec3 front;
+    vec3 origin;
+
+    float aspect_ratio;
+    float near;
+    float far;
+};
+
+layout (set = 0, binding = 0, std430) uniform scene_settings_t
+{
+    camera_t camera;
+    float resolution_x;
+    float resolution_Y;
+} scene_settings;
+
+
+struct attribute_index_t
+{
+    uint vertex_index;
+    uint normal_index;
+    uint texcoord_index;
+};
+
+struct triangle_t
+{
+    attribute_index_t vertices[3];
+    uint material_id;
+};
+
+
+layout(set = 0, binding = 2, std430) buffer triangles_t
+{
+    triangle_t triangles[];
+}
+
+layout(set = 0, binding = 3, std430) buffer vertices_t
+{
+    vec3 vertices[];
+}
+
+layout(set = 0, binding = 4, std430) buffer normals_t
+{
+    vec3 normals[];
+}
+
+layout(set = 0, binding = 5, std430) buffer texcoords_t
+{
+    vec3 texcoords[];
+}
+
+struct material_t
+{
+    vec4 base_color;
+    float roughness;
+    float metallic;
+    float specular;
+};
+
+layout(set = 0, binding = 6, std430) buffer materials_t
+{
+    material_t materials[];
+}
+
+struct light_t
+{
+    vec3 position;
+    float power;
+};
+
+layout(set = 0, binding = 7, std430) buffer lights_t
+{
+    light_t lights[];
+}
+
 void main(void)
 {
     vec2 output_color = vec2(gl_GlobalInvocationID.x / 1920.0, gl_GlobalInvocationID.y / 1080.0);

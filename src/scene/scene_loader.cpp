@@ -162,7 +162,8 @@ namespace bpmap
                                                            transform_of_object.size() + obj_number.size()
                                                          );
 
-                string_t obj_transform = ini_property_value(parsed, objects_section, obj_transform_id);
+                auto transform = ini_property_value(parsed, objects_section, obj_transform_id);
+                string_t obj_transform = (transform)? transform : "";
 
                 objects.push_back(std::make_pair(obj_path, obj_transform));
             }
@@ -197,6 +198,10 @@ namespace bpmap
             auto normal_offset = scene->normals.size();
             auto texcoord_offset = scene->texcoords.size();
 
+            scene->vertices.resize(vertex_offset + attributes.vertices.size());
+            scene->normals.resize(normal_offset + attributes.normals.size());
+            scene->texcoords.resize(texcoord_offset + attributes.texcoords.size());
+
             memcpy(
                     scene->vertices.data() + vertex_offset,
                     attributes.vertices.data(),
@@ -212,10 +217,6 @@ namespace bpmap
                     attributes.texcoords.data(),
                     attributes.texcoords.size()
                   );
-
-            scene->vertices.resize(vertex_offset + attributes.vertices.size());
-            scene->normals.resize(normal_offset + attributes.normals.size());
-            scene->texcoords.resize(texcoord_offset + attributes.texcoords.size());
 
             for(auto& shape: shapes)
             {
@@ -241,7 +242,7 @@ namespace bpmap
 
         error_t load_camera()
         {
-            static constexpr const char* camerasectn = "objects";
+            static constexpr const char* camerasectn = "camera";
             static constexpr const char* uppropname = "up";
             static constexpr const char* leftpropname = "left";
             static constexpr const char* frontpropname = "lookat";
@@ -266,13 +267,13 @@ namespace bpmap
             auto near = get_value(camera_section, nearpropname);
             auto far = get_value(camera_section, farpropname);
 
-            scene->camera.up = parse_point(up);
-            scene->camera.left = parse_point(left);
-            scene->camera.front = parse_point(front);
-            scene->camera.origin = parse_point(origin);
-            scene->camera.aspect_ratio = strtof(aspect_ratio.c_str(), nullptr);
-            scene->camera.near = strtof(near.c_str(), nullptr);
-            scene->camera.far = strtof(far.c_str(), nullptr);
+            scene->settings.camera.up = parse_point(up);
+            scene->settings.camera.left = parse_point(left);
+            scene->settings.camera.front = parse_point(front);
+            scene->settings.camera.origin = parse_point(origin);
+            scene->settings.camera.aspect_ratio = strtof(aspect_ratio.c_str(), nullptr);
+            scene->settings.camera.near = strtof(near.c_str(), nullptr);
+            scene->settings.camera.far = strtof(far.c_str(), nullptr);
 
             return error_t::success;
         }

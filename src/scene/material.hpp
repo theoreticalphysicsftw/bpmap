@@ -16,6 +16,9 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#include<core/algebra.hpp>
+#include<common.hpp>
+
 #ifndef MATERIAL_HPP
 #define MATERIAL_HPP
 
@@ -23,7 +26,10 @@ namespace bpmap
 {
     struct material_t
     {
-
+        color3df_t base_color;
+        float_t roughness;
+        float_t metallic;
+        float_t specular;
     };
 }
 

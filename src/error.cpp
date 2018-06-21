@@ -142,7 +142,7 @@ namespace bpmap
                 return "Failed to present images on screen!";
 
             case error_t::scene_settings_read_fail:
-                return "Failed to read screen settings!";
+                return "Failed to read scene settings!";
 
             case error_t::objects_load_fail:
                 return "Failed to load objects in the scene!";

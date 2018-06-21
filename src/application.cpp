@@ -27,6 +27,21 @@ namespace bpmap
     {
         error = window.init({1024,720, app_name});
 
+        if(error != error_t::success)
+        {
+            return;
+        }
+
+        // TODO: remove hardcoded scene and add an option to select from UI.
+        error = load_scene("scene.bpmap", scene);
+        scene.lights.resize(10);
+        scene.materials.resize(10);
+
+        if(error != error_t::success)
+        {
+            return;
+        }
+
         if(error == error_t::success)
         {
             error = vulkan.init(window);
@@ -49,10 +64,10 @@ namespace bpmap
                      error = gui_renderer.init();
                 }
             }
-        }
 
-        renderer.build_command_buffers();
-        renderer.submit_command_buffers();
+            renderer.build_command_buffers();
+            renderer.submit_command_buffers();
+        }
     }
 
     void application_t::loop()

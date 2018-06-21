@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include <core/io.hpp>
 
 #include "renderer.hpp"
@@ -81,6 +83,13 @@ namespace bpmap
         }
 
         status = create_image();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_buffers();
 
         if(status != error_t::success)
         {
@@ -396,29 +405,54 @@ namespace bpmap
 
     error_t renderer_t::create_descriptor_sets_layout()
     {
-        VkDescriptorSetLayoutBinding dslb[3] = {};
+        VkDescriptorSetLayoutBinding dslb[8] = {};
 
-        //dslb[0].binding = 0;
-        //dslb[0].descriptorCount = 1;
-        //dslb[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        //dslb[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        dslb[0].binding = 0;
+        dslb[0].descriptorCount = 1;
+        dslb[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dslb[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         dslb[1].binding = 1;
         dslb[1].descriptorCount = 1;
         dslb[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         dslb[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-        //dslb[2].binding = 2;
-        //dslb[2].descriptorCount = 1;
-        //dslb[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        //dslb[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        dslb[2].binding = 2;
+        dslb[2].descriptorCount = 1;
+        dslb[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        dslb[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        dslb[3].binding = 3;
+        dslb[3].descriptorCount = 1;
+        dslb[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        dslb[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        dslb[4].binding = 4;
+        dslb[4].descriptorCount = 1;
+        dslb[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        dslb[4].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        dslb[5].binding = 5;
+        dslb[5].descriptorCount = 1;
+        dslb[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        dslb[5].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        dslb[6].binding = 6;
+        dslb[6].descriptorCount = 1;
+        dslb[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        dslb[6].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+        dslb[7].binding = 7;
+        dslb[7].descriptorCount = 1;
+        dslb[7].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        dslb[7].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         VkDescriptorSetLayoutCreateInfo dslci = {};
         dslci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         dslci.pNext = nullptr;
         dslci.flags = 0;
-        dslci.bindingCount = 1;
-        dslci.pBindings = dslb + 1;
+        dslci.bindingCount = 8;
+        dslci.pBindings = dslb;
 
         return vulkan->create_descriptor_set_layout(descriptor_set_layout, dslci);
     }
@@ -435,16 +469,231 @@ namespace bpmap
         return vulkan->allocate_descriptor_set(descriptor_set, dsai);
     }
 
+    error_t renderer_t::create_buffers()
+    {
+        auto staging_buffer_size = std::max({
+                                                scene->vertices.size() * sizeof(decltype(scene->vertices)::value_type),
+                                                scene->normals.size() * sizeof(decltype(scene->normals)::value_type),
+                                                scene->texcoords.size() * sizeof(decltype(scene->texcoords)::value_type),
+                                                scene->materials.size() * sizeof(decltype(scene->materials)::value_type),
+                                                scene->triangles.size() * sizeof(decltype(scene->triangles)::value_type),
+                                                scene->lights.size() * sizeof(decltype(scene->lights)::value_type),
+                                                scene->objects.size() *  sizeof(decltype(scene->objects)::value_type)
+                                            });
+        vk_buffer_t staging_buffer;
+
+        VkBufferCreateInfo staging_buffer_bci = {};
+        staging_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        staging_buffer_bci.pNext = nullptr;
+        staging_buffer_bci.flags = 0;
+        staging_buffer_bci.queueFamilyIndexCount = 0;
+        staging_buffer_bci.pQueueFamilyIndices = nullptr;
+        staging_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        staging_buffer_bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        staging_buffer_bci.size = staging_buffer_size;
+
+        VmaAllocationCreateInfo staging_buffer_aci = {};
+        staging_buffer_aci.pool = VK_NULL_HANDLE;
+        staging_buffer_aci.flags = 0;
+        staging_buffer_aci.preferredFlags = 0;
+        staging_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        staging_buffer_aci.pUserData = nullptr;
+        staging_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        if(vulkan->create_buffer(staging_buffer, staging_buffer_bci, staging_buffer_aci) != error_t::success)
+        {
+            return error_t::buffer_creation_fail;
+        }
+
+        auto status = create_and_upload_buffer(vertices, scene->vertices, staging_buffer);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_and_upload_buffer(normals, scene->normals, staging_buffer);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_and_upload_buffer(texcoords, scene->texcoords, staging_buffer);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_and_upload_buffer(lights, scene->lights, staging_buffer);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_and_upload_buffer(materials, scene->materials, staging_buffer);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        status = create_and_upload_buffer(triangles, scene->triangles, staging_buffer);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        VkBufferCreateInfo settings_buffer_bci = {};
+        settings_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        settings_buffer_bci.pNext = nullptr;
+        settings_buffer_bci.flags = 0;
+        settings_buffer_bci.queueFamilyIndexCount = 0;
+        settings_buffer_bci.pQueueFamilyIndices = nullptr;
+        settings_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        settings_buffer_bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        settings_buffer_bci.size = sizeof(scene_settings_t);
+
+        VmaAllocationCreateInfo settings_buffer_aci = {};
+        settings_buffer_aci.pool = VK_NULL_HANDLE;
+        settings_buffer_aci.flags = 0;
+        settings_buffer_aci.preferredFlags = 0;
+        settings_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+        settings_buffer_aci.pUserData = nullptr;
+        settings_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        status = vulkan->create_buffer(scene_settings, settings_buffer_bci, settings_buffer_aci);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        void* mapped;
+
+        scene_settings.map(&mapped);
+        memcpy(mapped, &scene->settings, sizeof(scene_settings_t));
+        scene_settings.unmap();
+
+        return error_t::success;
+    }
+
+    template<typename T>
+    error_t renderer_t::create_and_upload_buffer(
+                                                  vk_buffer_t& buffer,
+                                                  const T& data,
+                                                  vk_buffer_t& staging_buffer
+                                                 )
+    {
+        VkBufferCreateInfo bci = {};
+        bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bci.pNext = nullptr;
+        bci.flags = 0;
+        bci.queueFamilyIndexCount = 0;
+        bci.pQueueFamilyIndices = nullptr;
+        bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        bci.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        bci.size = data.size() * sizeof(typename T::value_type);
+
+        VmaAllocationCreateInfo aci = {};
+        aci.pool = VK_NULL_HANDLE;
+        aci.flags = 0;
+        aci.preferredFlags = 0;
+        aci.requiredFlags = 0;
+        aci.pUserData = nullptr;
+        aci.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        if(vulkan->create_buffer(buffer, bci, aci) != error_t::success)
+        {
+            return error_t::buffer_creation_fail;
+        }
+
+        void* mapped;
+        auto status = staging_buffer.map(&mapped);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        memcpy(mapped, data.data(), bci.size);
+
+        staging_buffer.unmap();
+
+        VkCommandBuffer tmp_cmd_buffer;
+
+        VkCommandBufferAllocateInfo cbai = {};
+        cbai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cbai.pNext = nullptr;
+        cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cbai.commandPool = command_pool.pool;
+        cbai.commandBufferCount = 1;
+
+        status = vulkan->create_command_buffers(&tmp_cmd_buffer, cbai);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        VkCommandBufferBeginInfo cbbi = {};
+        cbbi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cbbi.pNext = nullptr;
+        cbbi.pInheritanceInfo = nullptr;
+        cbbi.flags = 0;
+
+        if(vkBeginCommandBuffer(tmp_cmd_buffer, &cbbi) != VK_SUCCESS)
+        {
+            return error_t::buffer_creation_fail;
+        }
+
+        VkBufferCopy regions;
+        regions.srcOffset = 0;
+        regions.dstOffset = 0;
+        regions.size = bci.size;
+
+        vkCmdCopyBuffer(tmp_cmd_buffer, staging_buffer.buffer, buffer.buffer, 1, &regions);
+
+        vkEndCommandBuffer(tmp_cmd_buffer);
+
+        VkSubmitInfo submit_info;
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.pNext = nullptr;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &tmp_cmd_buffer;
+        submit_info.signalSemaphoreCount = 0;
+        submit_info.waitSemaphoreCount = 0;
+
+        vk_fence_t fence;
+
+        status = vulkan->create_fence(fence);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        auto timeout = std::numeric_limits<uint64_t>::max();
+
+        vulkan->submit_work(submit_info, fence);
+
+        vulkan->wait_for_fence(fence, timeout);
+
+        return error_t::success;
+    }
+
     error_t renderer_t::update_descriptor_sets()
     {
-        VkWriteDescriptorSet wds[3] = {};
+        VkWriteDescriptorSet wds[8] = {};
 
-        VkDescriptorImageInfo render_output_info;
-        render_output_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        render_output_info.sampler = render_output_sampler;
-        render_output_info.imageView = render_output_view;
+        VkDescriptorBufferInfo scene_settings_info;
+        scene_settings_info.buffer = scene_settings.buffer;
+        scene_settings_info.offset = 0;
+        scene_settings_info.range = scene_settings.size;
 
-        /*
         wds[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[0].pNext = nullptr;
         wds[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -452,10 +701,15 @@ namespace bpmap
         wds[0].dstSet = descriptor_set;
         wds[0].dstBinding = 0;
         wds[0].dstArrayElement = 0;
-        wds[0].pBufferInfo = ;
+        wds[0].pBufferInfo = &scene_settings_info;
         wds[0].pImageInfo = nullptr;
         wds[0].pTexelBufferView = nullptr;
-        */
+
+        VkDescriptorImageInfo render_output_info;
+        render_output_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        render_output_info.sampler = render_output_sampler;
+        render_output_info.imageView = render_output_view;
+
         wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[1].pNext = nullptr;
         wds[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -467,8 +721,103 @@ namespace bpmap
         wds[1].pImageInfo = &render_output_info;
         wds[1].pTexelBufferView = nullptr;
 
+        VkDescriptorBufferInfo triangles_info;
+        triangles_info.buffer = triangles.buffer;
+        triangles_info.offset = 0;
+        triangles_info.range = triangles.size;
 
-        vulkan->update_descriptor_sets(wds + 1, 1);
+        wds[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[2].pNext = nullptr;
+        wds[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        wds[2].descriptorCount = 1;
+        wds[2].dstSet = descriptor_set;
+        wds[2].dstBinding = 2;
+        wds[2].dstArrayElement = 0;
+        wds[2].pBufferInfo = &triangles_info;
+        wds[2].pImageInfo = nullptr;
+        wds[2].pTexelBufferView = nullptr;
+
+        VkDescriptorBufferInfo vertices_info;
+        vertices_info.buffer = vertices.buffer;
+        vertices_info.offset = 0;
+        vertices_info.range = vertices.size;
+
+        wds[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[3].pNext = nullptr;
+        wds[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        wds[3].descriptorCount = 1;
+        wds[3].dstSet = descriptor_set;
+        wds[3].dstBinding = 3;
+        wds[3].dstArrayElement = 0;
+        wds[3].pBufferInfo = &vertices_info;
+        wds[3].pImageInfo = nullptr;
+        wds[3].pTexelBufferView = nullptr;
+
+        VkDescriptorBufferInfo normals_info;
+        normals_info.buffer = normals.buffer;
+        normals_info.offset = 0;
+        normals_info.range = normals.size;
+
+        wds[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[4].pNext = nullptr;
+        wds[4].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        wds[4].descriptorCount = 1;
+        wds[4].dstSet = descriptor_set;
+        wds[4].dstBinding = 4;
+        wds[4].dstArrayElement = 0;
+        wds[4].pBufferInfo = &normals_info;
+        wds[4].pImageInfo = nullptr;
+        wds[4].pTexelBufferView = nullptr;
+
+        VkDescriptorBufferInfo texcoords_info;
+        texcoords_info.buffer = texcoords.buffer;
+        texcoords_info.offset = 0;
+        texcoords_info.range = texcoords.size;
+
+        wds[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[5].pNext = nullptr;
+        wds[5].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        wds[5].descriptorCount = 1;
+        wds[5].dstSet = descriptor_set;
+        wds[5].dstBinding = 5;
+        wds[5].dstArrayElement = 0;
+        wds[5].pBufferInfo = &texcoords_info;
+        wds[5].pImageInfo = nullptr;
+        wds[5].pTexelBufferView = nullptr;
+
+        VkDescriptorBufferInfo materials_info;
+        materials_info.buffer = materials.buffer;
+        materials_info.offset = 0;
+        materials_info.range = materials.size;
+
+        wds[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[6].pNext = nullptr;
+        wds[6].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        wds[6].descriptorCount = 1;
+        wds[6].dstSet = descriptor_set;
+        wds[6].dstBinding = 6;
+        wds[6].dstArrayElement = 0;
+        wds[6].pBufferInfo = &materials_info;
+        wds[6].pImageInfo = nullptr;
+        wds[6].pTexelBufferView = nullptr;
+
+        VkDescriptorBufferInfo lights_info;
+        lights_info.buffer = lights.buffer;
+        lights_info.offset = 0;
+        lights_info.range = lights.size;
+
+        wds[7].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[7].pNext = nullptr;
+        wds[7].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        wds[7].descriptorCount = 1;
+        wds[7].dstSet = descriptor_set;
+        wds[7].dstBinding = 7;
+        wds[7].dstArrayElement = 0;
+        wds[7].pBufferInfo = &lights_info;
+        wds[7].pImageInfo = nullptr;
+        wds[7].pTexelBufferView = nullptr;
+
+        vulkan->update_descriptor_sets(wds, 8);
 
         return error_t::success;
     }
@@ -482,7 +831,7 @@ namespace bpmap
         pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         pool_sizes[1].descriptorCount = 1;
         pool_sizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        pool_sizes[2].descriptorCount = 1;
+        pool_sizes[2].descriptorCount = 6;
 
         VkDescriptorPoolCreateInfo dpci = {};
         dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

@@ -36,10 +36,24 @@ namespace bpmap
         VkCommandBuffer command_buffer;
         vk_command_pool_t command_pool;
 
+
+        vk_buffer_t triangles;
+
+        vk_buffer_t vertices;
+        vk_buffer_t normals;
+        vk_buffer_t texcoords;
+
+        vk_buffer_t materials;
+
+        vk_buffer_t lights;
+
+        vk_buffer_t scene_settings;
+
         error_t create_shaders();
 
         error_t create_descriptor_sets_layout();
         error_t create_descriptor_sets();
+        error_t create_buffers();
         error_t update_descriptor_sets();
         error_t create_descriptor_pools();
         error_t create_compute_pipeline_layouts();
@@ -48,6 +62,10 @@ namespace bpmap
         error_t create_command_buffers();
         error_t create_synchronization_primitives();
         error_t create_image();
+
+        template <typename T>
+        error_t create_and_upload_buffer(vk_buffer_t& buffer, const T& data, vk_buffer_t& staging_buffer);
+
 
     public:
         static constexpr const char* raytrace_kernel_path = "raytrace.comp.spv";

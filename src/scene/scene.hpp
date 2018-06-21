@@ -42,6 +42,7 @@ namespace bpmap
 
     struct scene_settings_t
     {
+        camera_t camera;
         float_t resolution_x = 1920;
         float_t resolution_y = 1080;
     };
@@ -63,7 +64,6 @@ namespace bpmap
 
         darray_t<light_t> lights;
 
-        camera_t camera;
         scene_settings_t settings;
     };
 }

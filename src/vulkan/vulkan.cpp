@@ -72,6 +72,7 @@ namespace bpmap
         }
 
         buffer.allocator = allocator;
+        buffer.size = bci.size;
 
         return error_t::success;
     }

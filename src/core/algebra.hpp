@@ -153,6 +153,7 @@ namespace bpmap
     using transform_2d_t = transform_t<float_t, 2, 2>;
 
     using color4d_t = vector_t<uint8_t, 4, false>;
+    using color3df_t = vector_t<float_t, 3, false>;
 }
 
 #endif // ALGEBRA_HPP

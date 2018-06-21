@@ -27,9 +27,10 @@ namespace bpmap
     struct point_light_t
     {
         point3d_t point;
+        float_t power;
     };
 
-    using light_t = variant_t<point_light_t>;
+    using light_t = point_light_t;
 }
 
 #endif // LIGHTS_HPP

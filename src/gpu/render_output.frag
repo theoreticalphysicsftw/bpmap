@@ -28,5 +28,5 @@ layout(location = 0) out vec4 output_color;
 
 void main()
 {
-    output_color = texture(rendered_image, fragment_uv;
+    output_color = texture(rendered_image, fragment_uv);
 }

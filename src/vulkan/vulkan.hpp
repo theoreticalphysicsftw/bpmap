@@ -213,6 +213,8 @@ namespace bpmap
     {
         friend class vulkan_t;
 
+
+
         VmaAllocation allocation;
         VmaAllocator allocator;
 
@@ -221,6 +223,7 @@ namespace bpmap
         void unmap();
 
         VkBuffer buffer;
+        size_t size;
 
         vk_buffer_t();
         ~vk_buffer_t();
