@@ -87,6 +87,13 @@ namespace bpmap
             return status;
         }
 
+        status = update_descriptor_sets();
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
         return error_t::success;
     }
 
@@ -134,7 +141,14 @@ namespace bpmap
                                   nullptr
                                 );
 
-        vkCmdDispatch(command_buffer,scene->settings.resolution_x/16, scene->settings.resolution_y/16, 1);
+        static constexpr uint32_t local_group_size_x = 8;
+        static constexpr uint32_t local_group_size_y = 8;
+
+        vkCmdDispatch(
+                       command_buffer,scene->settings.resolution_x / local_group_size_x,
+                       scene->settings.resolution_y / local_group_size_y,
+                       1
+                     );
 
         vkEndCommandBuffer(command_buffer);
 
@@ -201,9 +215,9 @@ namespace bpmap
         ici.arrayLayers = 1;
         ici.mipLevels = 1;
         ici.samples = VK_SAMPLE_COUNT_1_BIT;
-        ici.format = VK_FORMAT_R8G8B8A8_UNORM;
+        ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
         ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ici.tiling = VK_IMAGE_TILING_LINEAR;
         ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         ici.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         ici.pQueueFamilyIndices = nullptr;
@@ -308,7 +322,7 @@ namespace bpmap
         ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         ivci.pNext = nullptr;
         ivci.flags = 0;
-        ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
+        ivci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
         ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ivci.subresourceRange = isr;
         ivci.image = render_output.image;
@@ -384,27 +398,27 @@ namespace bpmap
     {
         VkDescriptorSetLayoutBinding dslb[3] = {};
 
-        dslb[0].binding = 0;
-        dslb[0].descriptorCount = 1;
-        dslb[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        dslb[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        //dslb[0].binding = 0;
+        //dslb[0].descriptorCount = 1;
+        //dslb[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        //dslb[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         dslb[1].binding = 1;
         dslb[1].descriptorCount = 1;
         dslb[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         dslb[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-        dslb[2].binding = 2;
-        dslb[2].descriptorCount = 1;
-        dslb[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        dslb[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        //dslb[2].binding = 2;
+        //dslb[2].descriptorCount = 1;
+        //dslb[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        //dslb[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
         VkDescriptorSetLayoutCreateInfo dslci = {};
         dslci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         dslci.pNext = nullptr;
         dslci.flags = 0;
-        dslci.bindingCount = 3;
-        dslci.pBindings = dslb;
+        dslci.bindingCount = 1;
+        dslci.pBindings = dslb + 1;
 
         return vulkan->create_descriptor_set_layout(descriptor_set_layout, dslci);
     }
@@ -421,18 +435,54 @@ namespace bpmap
         return vulkan->allocate_descriptor_set(descriptor_set, dsai);
     }
 
+    error_t renderer_t::update_descriptor_sets()
+    {
+        VkWriteDescriptorSet wds[3] = {};
+
+        VkDescriptorImageInfo render_output_info;
+        render_output_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        render_output_info.sampler = render_output_sampler;
+        render_output_info.imageView = render_output_view;
+
+        /*
+        wds[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[0].pNext = nullptr;
+        wds[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        wds[0].descriptorCount = 1;
+        wds[0].dstSet = descriptor_set;
+        wds[0].dstBinding = 0;
+        wds[0].dstArrayElement = 0;
+        wds[0].pBufferInfo = ;
+        wds[0].pImageInfo = nullptr;
+        wds[0].pTexelBufferView = nullptr;
+        */
+        wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        wds[1].pNext = nullptr;
+        wds[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        wds[1].descriptorCount = 1;
+        wds[1].dstSet = descriptor_set;
+        wds[1].dstBinding = 1;
+        wds[1].dstArrayElement = 0;
+        wds[1].pBufferInfo = nullptr;
+        wds[1].pImageInfo = &render_output_info;
+        wds[1].pTexelBufferView = nullptr;
+
+
+        vulkan->update_descriptor_sets(wds + 1, 1);
+
+        return error_t::success;
+    }
+
     error_t renderer_t::create_descriptor_pools()
     {
         VkDescriptorPoolSize pool_sizes[4] = {};
 
         pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         pool_sizes[0].descriptorCount = 1;
-        pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         pool_sizes[1].descriptorCount = 1;
-        pool_sizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        pool_sizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         pool_sizes[2].descriptorCount = 1;
-        pool_sizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        pool_sizes[3].descriptorCount = 1;
 
         VkDescriptorPoolCreateInfo dpci = {};
         dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

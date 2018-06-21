@@ -25,6 +25,7 @@ namespace bpmap
         static constexpr uint32_t pipeline_count = 1;
         static constexpr uint32_t raytrace_pipeline = 0;
 
+
         darray_t<VkPipeline> compute_pipelines;
         darray_t<VkPipelineLayout> compute_pipeline_layouts;
 
@@ -39,6 +40,7 @@ namespace bpmap
 
         error_t create_descriptor_sets_layout();
         error_t create_descriptor_sets();
+        error_t update_descriptor_sets();
         error_t create_descriptor_pools();
         error_t create_compute_pipeline_layouts();
         error_t create_compute_pipelines();
