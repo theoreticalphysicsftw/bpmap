@@ -234,12 +234,12 @@ namespace bpmap
         ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ivci.subresourceRange = isr;
         ivci.image = font_image.image;
-        /*ivci.components = {
+        ivci.components = {
                             VK_COMPONENT_SWIZZLE_R,
                             VK_COMPONENT_SWIZZLE_G,
                             VK_COMPONENT_SWIZZLE_B,
                             VK_COMPONENT_SWIZZLE_A
-                           };*/
+                           };
 
 
         if(vulkan->create_image_view(font_view, ivci) != error_t::success)
@@ -298,14 +298,14 @@ namespace bpmap
         VkDescriptorPoolSize pool_sizes[2] = {};
 
         pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        pool_sizes[0].descriptorCount = 1;
+        pool_sizes[0].descriptorCount = 2;
         pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        pool_sizes[1].descriptorCount = 1;
+        pool_sizes[1].descriptorCount = 2;
 
         VkDescriptorPoolCreateInfo dpci = {};
         dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         dpci.pNext = nullptr;
-        dpci.maxSets = 1;
+        dpci.maxSets = 2;
         dpci.poolSizeCount = 2;
         dpci.pPoolSizes = pool_sizes;
 
@@ -328,9 +328,7 @@ namespace bpmap
             return status;
         }
 
-        return status;
-
-        //return vulkan->allocate_descriptor_set(render_output_descriptor_set, dsai);
+        return vulkan->allocate_descriptor_set(render_output_descriptor_set, dsai);
     }
 
     error_t gui_renderer_t::update_descriptor_sets()
@@ -346,9 +344,9 @@ namespace bpmap
         font_texture_bind_info.sampler = font_sampler;
 
         VkDescriptorImageInfo render_output_bind_info = {};
-        font_texture_bind_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        font_texture_bind_info.imageView = renderer->render_output_view;
-        font_texture_bind_info.sampler = renderer->render_output_sampler;
+        render_output_bind_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        render_output_bind_info.imageView = renderer->render_output_view;
+        render_output_bind_info.sampler = renderer->render_output_sampler;
 
         VkWriteDescriptorSet wds[2] = {};
 
@@ -374,11 +372,11 @@ namespace bpmap
         wds[1].pImageInfo = &font_texture_bind_info;
         wds[1].pTexelBufferView = nullptr;
 
-        //vulkan->update_descriptor_sets(wds, 2);
+        vulkan->update_descriptor_sets(wds, 2);
 
-        //wds[0].dstSet = render_output_descriptor_set;
-        //wds[1].dstSet = render_output_descriptor_set;
-        //wds[1].pImageInfo = &render_output_bind_info;
+        wds[0].dstSet = render_output_descriptor_set;
+        wds[1].dstSet = render_output_descriptor_set;
+        wds[1].pImageInfo = &render_output_bind_info;
 
 
         vulkan->update_descriptor_sets(wds, 2);
@@ -899,7 +897,7 @@ namespace bpmap
 
 
         vkCmdBeginRenderPass(command_buffers[index], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
-        /*
+
         vkCmdBindPipeline(command_buffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS, render_output_pipeline);
 
         vkCmdBindDescriptorSets(
@@ -908,7 +906,7 @@ namespace bpmap
                                  pipeline_layout,
                                  0,
                                  1,
-                                 &descriptor_set,
+                                 &render_output_descriptor_set,
                                  0,
                                  nullptr
                                 );
@@ -917,7 +915,7 @@ namespace bpmap
         vkCmdSetViewport(command_buffers[index], 0, 1, &viewport);
 
         vkCmdDraw(command_buffers[index], 6, 1, 0, 0);
-        */
+
 
         // Draw Gui
 
