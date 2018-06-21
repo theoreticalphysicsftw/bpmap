@@ -34,7 +34,7 @@ struct camera_t
     float far;
 };
 
-layout (set = 0, binding = 0, std430) uniform scene_settings_t
+layout (set = 0, binding = 0, std140) uniform scene_settings_t
 {
     camera_t camera;
     float resolution_x;
@@ -59,22 +59,22 @@ struct triangle_t
 layout(set = 0, binding = 2, std430) buffer triangles_t
 {
     triangle_t triangles[];
-}
+};
 
 layout(set = 0, binding = 3, std430) buffer vertices_t
 {
     vec3 vertices[];
-}
+};
 
 layout(set = 0, binding = 4, std430) buffer normals_t
 {
     vec3 normals[];
-}
+};
 
 layout(set = 0, binding = 5, std430) buffer texcoords_t
 {
     vec3 texcoords[];
-}
+};
 
 struct material_t
 {
@@ -87,7 +87,7 @@ struct material_t
 layout(set = 0, binding = 6, std430) buffer materials_t
 {
     material_t materials[];
-}
+};
 
 struct light_t
 {
@@ -98,7 +98,7 @@ struct light_t
 layout(set = 0, binding = 7, std430) buffer lights_t
 {
     light_t lights[];
-}
+};
 
 void main(void)
 {

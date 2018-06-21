@@ -34,8 +34,6 @@ namespace bpmap
 
         // TODO: remove hardcoded scene and add an option to select from UI.
         error = load_scene("scene.bpmap", scene);
-        scene.lights.resize(10);
-        scene.materials.resize(10);
 
         if(error != error_t::success)
         {
