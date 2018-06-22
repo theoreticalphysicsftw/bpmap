@@ -24,13 +24,19 @@
 
 namespace bpmap
 {
-    struct point_light_t
+    struct rect_light_t
     {
         point3d_t point;
+        codirection3d_t normal;
+        direction3d_t basis_vec0;
+        direction3d_t basis_vec1;
+        float_t param0_max;
+        float_t param1_max;
+
         float_t power;
     };
 
-    using light_t = point_light_t;
+    using light_t = rect_light_t;
 }
 
 #endif // LIGHTS_HPP

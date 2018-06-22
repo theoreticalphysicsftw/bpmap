@@ -68,6 +68,16 @@ namespace bpmap
 
         #undef BPMAP_IMPLEMENT_VECTOR_ASSIGN_OPERATOR
 
+        T& operator[](size_t i)
+        {
+            return components[i];
+        }
+
+        T& operator[](size_t i) const
+        {
+            return components[i];
+        }
+
     };
 
     template<typename T, size_t size_0, size_t size_1>
@@ -133,6 +143,16 @@ namespace bpmap
             }
 
             return result;
+        }
+
+        T& operator[](size_t i)
+        {
+            return components[i];
+        }
+
+        T& operator[](size_t i) const
+        {
+            return components[i];
         }
     };
 

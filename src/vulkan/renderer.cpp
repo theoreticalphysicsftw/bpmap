@@ -572,10 +572,16 @@ namespace bpmap
             return status;
         }
 
-        void* mapped;
+        void* mapped_settings;
 
-        scene_settings.map(&mapped);
-        memcpy(mapped, &scene->settings, sizeof(scene_settings_t));
+        status = scene_settings.map(&mapped_settings);
+
+        if(status != error_t::success)
+        {
+            return status;
+        }
+
+        memcpy(mapped_settings, &scene->settings, sizeof(mapped_settings));
         scene_settings.unmap();
 
         return error_t::success;

@@ -49,7 +49,9 @@ namespace bpmap
         presentation_fail,
         compute_kernel_read_fail,
         scene_settings_read_fail,
+        global_settings_load_fail,
         objects_load_fail,
+        lights_load_fail,
         render_output_setup_fail,
     };
 

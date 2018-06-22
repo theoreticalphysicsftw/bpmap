@@ -144,8 +144,14 @@ namespace bpmap
             case error_t::scene_settings_read_fail:
                 return "Failed to read scene settings!";
 
+            case error_t::global_settings_load_fail:
+                return "Failed to load global scene settings!";
+
             case error_t::objects_load_fail:
                 return "Failed to load objects in the scene!";
+
+            case error_t::lights_load_fail:
+                return "Failed to load lights in the scene!";
 
             case error_t::render_output_setup_fail:
                 return "Failed to setup render output!";

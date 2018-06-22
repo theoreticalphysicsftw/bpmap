@@ -111,12 +111,92 @@ namespace bpmap
 
         error_t load_settings()
         {
+            static constexpr const char* global_settings_section_name = "settings";
+
+            auto global_settings_section = ini_find_section(
+                                                             parsed,
+                                                             global_settings_section_name,
+                                                             strlen(global_settings_section_name)
+                                                           );
+
+            if(global_settings_section == INI_NOT_FOUND)
+            {
+                return error_t::global_settings_load_fail;
+            }
+
+            auto resolution_x = get_value(global_settings_section, "resolution_x");
+            auto resolution_y = get_value(global_settings_section, "resolution_y");
+            auto samples_per_pixel = get_value(global_settings_section, "samples_per_pixel");
+            auto light_samples = get_value(global_settings_section, "light_samples");
+            auto max_reflection_bounces = get_value(global_settings_section, "max_reflection_bounces");
+
+            scene->settings.resolution_x = strtof(resolution_x.c_str(), nullptr);
+            scene->settings.resolution_y = strtof(resolution_y.c_str(), nullptr);
+            scene->settings.samples_per_pixel = strtoul(samples_per_pixel.c_str(), nullptr, 10);
+            scene->settings.light_samples =  strtoul(light_samples.c_str(), nullptr, 10);
+            scene->settings.max_reflection_bounces =  strtoul(max_reflection_bounces.c_str(), nullptr, 10);
+
             return error_t::success;
         }
 
 
         error_t load_lights()
         {
+            static constexpr const char* lightsectn = "lights";
+
+            auto lights_section = ini_find_section(parsed, lightsectn, strlen(lightsectn));
+
+            if(lights_section == INI_NOT_FOUND)
+            {
+                return error_t::lights_load_fail;
+            }
+
+            static constexpr const char* point_of_rect_light = "point";
+            static constexpr const char* normal_of_rect_light = "normal";
+            static constexpr const char* parameter0_max_of_rect_light = "param0_max";
+            static constexpr const char* parameter1_max_of_rect_light = "param1_max";
+            static constexpr const char* basis_vec0_of_rect_light = "basis_vec0";
+            static constexpr const char* basis_vec1_of_rect_light = "basis_vec1";
+            static constexpr const char* power_of_rect_light = "power";
+
+
+            for(auto i = 0; ; ++i)
+            {
+                auto light_number = std::to_string(i);
+
+                auto point = get_value(lights_section, point_of_rect_light + light_number);
+                auto normal = get_value(lights_section, normal_of_rect_light + light_number);
+                auto param0_max = get_value(lights_section, parameter0_max_of_rect_light + light_number);
+                auto param1_max = get_value(lights_section, parameter1_max_of_rect_light + light_number);
+                auto basis0 = get_value(lights_section, basis_vec0_of_rect_light + light_number);
+                auto basis1 = get_value(lights_section, basis_vec1_of_rect_light + light_number);
+                auto power = get_value(lights_section, power_of_rect_light + light_number);
+
+                if(
+                    point.empty() ||
+                    normal.empty() ||
+                    param0_max.empty() ||
+                    param1_max.empty() ||
+                    basis0.empty() ||
+                    basis1.empty() ||
+                    power.empty()
+                  )
+                {
+                    break;
+                }
+
+                light_t light;
+                light.point = parse_point(point);
+                light.normal = parse_point(normal);
+                light.basis_vec0 = parse_point(basis0);
+                light.basis_vec1 = parse_point(basis1);
+                light.param0_max = strtof(param0_max.c_str(), nullptr);
+                light.param1_max = strtof(param1_max.c_str(), nullptr);
+                light.power = strtof(power.c_str(), nullptr);
+
+                scene->lights.push_back(light);
+            }
+
             return error_t::success;
         }
 
@@ -232,9 +312,22 @@ namespace bpmap
                     t.vertices[2].vertex_index = shape.mesh.indices[i + 2].vertex_index + vertex_offset;
                     t.vertices[2].normal_index = shape.mesh.indices[i + 2].normal_index + normal_offset;
                     t.vertices[2].texcoord_index = shape.mesh.indices[i + 2].texcoord_index + texcoord_offset;
+                    t.material_id = shape.mesh.material_ids[i/3];
 
                     scene->triangles.push_back(t);
                 }
+            }
+
+            for(auto& m: materials)
+            {
+                material_t material;
+                material.base_color[0] = m.diffuse[0];
+                material.base_color[1] = m.diffuse[1];
+                material.base_color[2] = m.diffuse[2];
+                material.metallic = m.metallic;
+                material.roughness = m.roughness;
+
+                scene->materials.push_back(material);
             }
 
             return error_t::success;
@@ -250,6 +343,7 @@ namespace bpmap
             static constexpr const char* arpropname = "aspect_ratio";
             static constexpr const char* nearpropname = "near";
             static constexpr const char* farpropname = "far";
+            static constexpr const char* fovpropname = "far";
 
             auto camera_section = ini_find_section(parsed, camerasectn, strlen(camerasectn));
 
@@ -266,6 +360,7 @@ namespace bpmap
             auto aspect_ratio = get_value(camera_section, arpropname);
             auto near = get_value(camera_section, nearpropname);
             auto far = get_value(camera_section, farpropname);
+            auto fov = get_value(camera_section, fovpropname);
 
             scene->settings.camera.up = parse_point(up);
             scene->settings.camera.left = parse_point(left);
@@ -274,6 +369,7 @@ namespace bpmap
             scene->settings.camera.aspect_ratio = strtof(aspect_ratio.c_str(), nullptr);
             scene->settings.camera.near = strtof(near.c_str(), nullptr);
             scene->settings.camera.far = strtof(far.c_str(), nullptr);
+            scene->settings.camera.field_of_view = strtof(fov.c_str(), nullptr);
 
             return error_t::success;
         }

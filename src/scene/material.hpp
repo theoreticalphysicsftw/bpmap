@@ -29,7 +29,6 @@ namespace bpmap
         color3df_t base_color;
         float_t roughness;
         float_t metallic;
-        float_t specular;
     };
 }
 

@@ -35,6 +35,7 @@ namespace bpmap
         direction3d_t front;
         point3d_t origin;
 
+        float_t field_of_view;
         float_t aspect_ratio;
         float_t near;
         float_t far;
@@ -43,8 +44,12 @@ namespace bpmap
     struct scene_settings_t
     {
         camera_t camera;
-        float_t resolution_x = 1920;
-        float_t resolution_y = 1080;
+        float_t resolution_x;
+        float_t resolution_y;
+
+        uint32_t samples_per_pixel;
+        uint32_t light_samples;
+        uint32_t max_reflection_bounces;
     };
 
     struct scene_t
