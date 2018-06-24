@@ -30,6 +30,7 @@ namespace bpmap
         codirection3d_t normal;
         direction3d_t basis_vec0;
         direction3d_t basis_vec1;
+        color3df_t color;
         float_t param0_max;
         float_t param1_max;
 

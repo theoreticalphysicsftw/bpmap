@@ -30,26 +30,27 @@ namespace bpmap
 {
     struct camera_t
     {
+        // All vec3s should be aligned at 16 bytes GPU side.
         direction3d_t up;
-        direction3d_t left;
-        direction3d_t front;
-        point3d_t origin;
-
         float_t field_of_view;
+        direction3d_t left;
         float_t aspect_ratio;
+        direction3d_t front;
         float_t near;
+        point3d_t origin;
         float_t far;
     };
 
     struct scene_settings_t
     {
         camera_t camera;
-        float_t resolution_x;
-        float_t resolution_y;
 
         uint32_t samples_per_pixel;
         uint32_t light_samples;
         uint32_t max_reflection_bounces;
+        uint32_t resolution_x;
+        uint32_t resolution_y;
+        uint32_t pad[3];
     };
 
     struct scene_t

@@ -157,6 +157,7 @@ namespace bpmap
             static constexpr const char* parameter1_max_of_rect_light = "param1_max";
             static constexpr const char* basis_vec0_of_rect_light = "basis_vec0";
             static constexpr const char* basis_vec1_of_rect_light = "basis_vec1";
+            static constexpr const char* color_of_rect_ligth = "color";
             static constexpr const char* power_of_rect_light = "power";
 
 
@@ -170,6 +171,7 @@ namespace bpmap
                 auto param1_max = get_value(lights_section, parameter1_max_of_rect_light + light_number);
                 auto basis0 = get_value(lights_section, basis_vec0_of_rect_light + light_number);
                 auto basis1 = get_value(lights_section, basis_vec1_of_rect_light + light_number);
+                auto color = get_value(lights_section, color_of_rect_ligth + light_number);
                 auto power = get_value(lights_section, power_of_rect_light + light_number);
 
                 if(
@@ -179,6 +181,7 @@ namespace bpmap
                     param1_max.empty() ||
                     basis0.empty() ||
                     basis1.empty() ||
+                    color.empty() ||
                     power.empty()
                   )
                 {
@@ -190,6 +193,7 @@ namespace bpmap
                 light.normal = parse_point(normal);
                 light.basis_vec0 = parse_point(basis0);
                 light.basis_vec1 = parse_point(basis1);
+                light.color = parse_point(color);
                 light.param0_max = strtof(param0_max.c_str(), nullptr);
                 light.param1_max = strtof(param1_max.c_str(), nullptr);
                 light.power = strtof(power.c_str(), nullptr);
@@ -343,7 +347,7 @@ namespace bpmap
             static constexpr const char* arpropname = "aspect_ratio";
             static constexpr const char* nearpropname = "near";
             static constexpr const char* farpropname = "far";
-            static constexpr const char* fovpropname = "far";
+            static constexpr const char* fovpropname = "fov";
 
             auto camera_section = ini_find_section(parsed, camerasectn, strlen(camerasectn));
 
