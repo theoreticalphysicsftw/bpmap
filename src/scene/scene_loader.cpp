@@ -201,6 +201,11 @@ namespace bpmap
                 scene->lights.push_back(light);
             }
 
+            if(scene->lights.empty())
+            {
+                return error_t::lights_load_fail;
+            }
+
             return error_t::success;
         }
 
@@ -262,6 +267,15 @@ namespace bpmap
                 }
             }
 
+            if(
+                 scene->triangles.empty() ||
+                 scene->vertices.empty() ||
+                 scene->normals.empty()
+              )
+            {
+                return error_t::objects_load_fail;
+            }
+
             return error_t::success;
         }
 
@@ -282,29 +296,29 @@ namespace bpmap
             auto normal_offset = scene->normals.size();
             auto texcoord_offset = scene->texcoords.size();
 
-            scene->vertices.resize(vertex_offset + attributes.vertices.size());
-            scene->normals.resize(normal_offset + attributes.normals.size());
-            scene->texcoords.resize(texcoord_offset + attributes.texcoords.size());
+            scene->vertices.resize(vertex_offset + attributes.vertices.size()/3);
+            scene->normals.resize(normal_offset + attributes.normals.size()/3);
+            scene->texcoords.resize(texcoord_offset + attributes.texcoords.size()/2);
 
             memcpy(
                     scene->vertices.data() + vertex_offset,
                     attributes.vertices.data(),
-                    attributes.vertices.size()
+                    attributes.vertices.size() * sizeof(float_t)
                    );
             memcpy(
                     scene->normals.data() + normal_offset,
                     attributes.normals.data(),
-                    attributes.normals.size()
+                    attributes.normals.size() * sizeof(float_t)
                   );
             memcpy(
                     scene->texcoords.data() + texcoord_offset,
                     attributes.texcoords.data(),
-                    attributes.texcoords.size()
+                    attributes.texcoords.size() * sizeof(float_t)
                   );
 
             for(auto& shape: shapes)
             {
-                for(auto i = 0; i + 3 < shape.mesh.indices.size(); i+=3)
+                for(auto i = 0; i < shape.mesh.indices.size(); i+=3)
                 {
                     triangle_t t;
                     t.vertices[0].vertex_index = shape.mesh.indices[i].vertex_index + vertex_offset;

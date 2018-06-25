@@ -17,6 +17,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <chrono>
 
 #include "application.hpp"
 
@@ -25,7 +26,7 @@ namespace bpmap
 
     application_t::application_t()
     {
-        error = window.init({1024,720, app_name});
+        error = window.init({1280,720, app_name});
 
         if(error != error_t::success)
         {
@@ -76,10 +77,21 @@ namespace bpmap
             std::exit(~0);
         }
 
+        static constexpr uint32_t frame_limit = 60;
+
+        auto t0 = std::chrono::high_resolution_clock::now();
+
         while(!window.closed())
         {
             window.poll_events();
-            gui_renderer.render_frame();
+            auto t1 = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+
+            if(duration >= 1E9 / frame_limit)
+            {
+                t0 = t1;
+                gui_renderer.render_frame();
+            }
         }
     }
 }

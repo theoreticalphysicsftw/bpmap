@@ -50,7 +50,7 @@ namespace bpmap
     void gui_t::set_style()
     {
         nk_color table[NK_COLOR_COUNT];
-        table[NK_COLOR_TEXT] = nk_rgba(0, 0, 0, 255);
+        table[NK_COLOR_TEXT] = nk_rgba(255, 255, 255, 255);
         table[NK_COLOR_WINDOW] = nk_rgba(25, 175, 175, 0);
         table[NK_COLOR_HEADER] = nk_rgba(25, 175, 175, 255);
         table[NK_COLOR_BORDER] = nk_rgba(0, 0, 0, 255);
@@ -188,6 +188,10 @@ namespace bpmap
         data.projection.components[14] = 0.0;
         data.projection.components[15] = 1.0;
 
+        data.render_a = render_a;
+        data.render_gamma = render_gamma;
+
+        data_changed = false;
 
         return data;
     }
@@ -226,15 +230,19 @@ namespace bpmap
         nk_begin(&context, "bpmap", nk_rect(0,0, window->get_width(), window->get_height()), 0);
 
 
-        nk_layout_row_dynamic(&context, 50, 5);
-        if (nk_button_label(&context, "button"))
-        {
+        nk_layout_row_dynamic(&context, 1, 3);
+        nk_label(&context, "Gamma", NK_TEXT_ALIGN_CENTERED);
+        nk_label(&context, "A", NK_TEXT_ALIGN_CENTERED);
 
+        nk_layout_row_dynamic(&context, 50, 3);
+        if(nk_slider_float(&context, 0, &render_gamma, 5.0, 0.01))
+        {
+            data_changed = true;
         }
-        nk_layout_row_dynamic(&context, 50, 5);
-        if (nk_button_label(&context, "button2"))
-        {
 
+        if(nk_slider_float(&context, 0, &render_a, 5.0, 0.01))
+        {
+            data_changed = true;
         }
 
         nk_end(&context);

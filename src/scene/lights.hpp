@@ -27,13 +27,18 @@ namespace bpmap
     struct rect_light_t
     {
         point3d_t point;
+        float pad0;
+
         codirection3d_t normal;
+        float pad1;
+
         direction3d_t basis_vec0;
-        direction3d_t basis_vec1;
-        color3df_t color;
         float_t param0_max;
+
+        direction3d_t basis_vec1;
         float_t param1_max;
 
+        color3df_t color;
         float_t power;
     };
 

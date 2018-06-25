@@ -38,6 +38,8 @@ namespace bpmap
     struct gui_data_t
     {
         transform3d_embedded_t projection;
+        float_t render_a;
+        float_t render_gamma;
     };
 
     struct draw_call_t
@@ -67,6 +69,11 @@ namespace bpmap
 
         void set_style();
 
+        float_t render_a = 1.0;
+        float_t render_gamma = 1.0;
+
+        bool_t data_changed = false;
+
     public:
         gui_t();
         void bind_window(window_t& window);
@@ -90,6 +97,8 @@ namespace bpmap
 
         size_t get_width() const {return window->get_width();}
         size_t get_height() const {return window->get_height();}
+
+        bool_t gui_data_changed() {return data_changed;}
 
         void get_input();
         void run();

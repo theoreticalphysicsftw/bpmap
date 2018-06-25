@@ -21,12 +21,15 @@
 
 layout(binding = 1) uniform sampler2D rendered_image;
 
-layout(location = 0) in vec4 fragment_color;
+layout(location = 0) in vec4 fragment_data;
 layout(location = 1) in vec2 fragment_uv;
 
 layout(location = 0) out vec4 output_color;
 
 void main()
 {
-    output_color = texture(rendered_image, fragment_uv);
+    vec4 image_color = texture(rendered_image, fragment_uv);
+    float a = fragment_data.x;
+    float gamma = fragment_data.y;
+    output_color = vec4(a * pow(image_color.xyz, vec3(gamma, gamma, gamma)), 1.0);
 }

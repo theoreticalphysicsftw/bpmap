@@ -21,10 +21,11 @@
 
 #define RECURSION_LIMIT 16
 #define EPSILON 0.0001
-#define BIAS (EPSILON * 2)
+#define BIAS (EPSILON * 10)
 #define INFINITY 1.0 / 0.0
 #define PI 3.1415927410125732421875
 #define SQRT_TWO_OVER_PI 0.4501581455517614
+#define TWO_TO_THE_MINUS_THIRTY_TWO 1.0 / (~0u + 1.0)
 
 struct camera_t
 {
@@ -72,15 +73,23 @@ layout(set = 0, binding = 2, std430) buffer triangles_t
 };
 
 
+// Abuse std430 rules to avoid padding.
+struct std430vec3_t
+{
+    float x;
+    float y;
+    float z;
+};
+
 layout(set = 0, binding = 3, std430) buffer vertices_t
 {
-    vec3 vertices[];
+    std430vec3_t vertices[];
 };
 
 
 layout(set = 0, binding = 4, std430) buffer normals_t
 {
-    vec3 normals[];
+    std430vec3_t normals[];
 };
 
 
@@ -107,14 +116,19 @@ layout(set = 0, binding = 6, std430) buffer materials_t
 struct light_t
 {
     vec3 point;
+    // It would've been automatically done by the compiler.
+    float pad1;
+
     vec3 normal;
+    float pad2;
+
     vec3 basis_vec0;
-    vec3 basis_vec1;
-    vec3 color;
     float param0_max;
+
+    vec3 basis_vec1;
     float param1_max;
 
-
+    vec3 color;
     float power;
 };
 
@@ -137,7 +151,7 @@ uint reverse_bits(uint x)
 
 float van_der_corput(uint x)
 {
-    return reverse_bits(x) * 1e-32;
+    return reverse_bits(x) * TWO_TO_THE_MINUS_THIRTY_TWO;
 }
 
 
@@ -157,32 +171,38 @@ struct intersection_t
 
 bool intersect_triangle(ray_t ray, triangle_t triangle, inout intersection_t intersection)
 {
-    vec3 v0 = vertices[triangle.vertices[0].vertex_index];
-    vec3 v1 = vertices[triangle.vertices[1].vertex_index];
-    vec3 v2 = vertices[triangle.vertices[2].vertex_index];
-    vec3 n0 = normals[triangle.vertices[0].normal_index];
-    vec3 n1 = normals[triangle.vertices[1].normal_index];
-    vec3 n2 = normals[triangle.vertices[2].normal_index];
+    std430vec3_t tv0 = vertices[triangle.vertices[0].vertex_index];
+    std430vec3_t tv1 = vertices[triangle.vertices[1].vertex_index];
+    std430vec3_t tv2 = vertices[triangle.vertices[2].vertex_index];
+    std430vec3_t tn0 = normals[triangle.vertices[0].normal_index];
+    std430vec3_t tn1 = normals[triangle.vertices[1].normal_index];
+    std430vec3_t tn2 = normals[triangle.vertices[2].normal_index];
+    vec3 v0 = vec3(tv0.x, tv0.y, tv0.z);
+    vec3 v1 = vec3(tv1.x, tv1.y, tv1.z);
+    vec3 v2 = vec3(tv2.x, tv2.y, tv2.z);
+    vec3 n0 = vec3(tn0.x, tn0.y, tn0.z);
+    vec3 n1 = vec3(tn1.x, tn1.y, tn1.z);
+    vec3 n2 = vec3(tn2.x, tn2.y, tn2.z);
 
-    // Barycentric coordinates
     float alpha;
     float beta;
     float gamma;
 
-    vec3 v0v1 = v1 - v0;
     vec3 v0v2 = v2 - v0;
-    vec3 p = cross(ray.direction, v0v2);
-    float det = dot(v0v1, p);
+    vec3 v1v2 = v2 - v1;
+    vec3 p = cross(v1v2, ray.direction);
+    float det = dot(v0v2, p);
 
-    // backface culling
-    if (det < EPSILON)
+
+    if (abs(det) < EPSILON)
     {
         return false;
     }
 
     float inv_det = 1.0 / det;
 
-    vec3 r = ray.direction - v0;
+    vec3 r = v2 - ray.origin;
+
     alpha = dot(r, p) * inv_det;
 
     if (alpha < 0 || alpha > 1)
@@ -190,20 +210,19 @@ bool intersect_triangle(ray_t ray, triangle_t triangle, inout intersection_t int
         return false;
     }
 
-    vec3 q = cross(r, v0v1);
-    beta = dot(ray.direction, q) * inv_det;
+    beta = dot(cross(ray.direction, v0v2), r) * inv_det;
 
     if (beta < 0 || alpha + beta > 1)
     {
         return false;
     }
 
-    gamma = 1 - alpha - beta;
+    gamma = 1 - beta - alpha;
 
-    intersection.t = dot(v0v2, q) * inv_det;
+    intersection.t = dot(cross(v0v2, v1v2), r) * inv_det;
 
     // Fill intersection info
-    intersection.normal = alpha * n0 + beta * n1 + gamma * n2;
+    intersection.normal = normalize(alpha * n0 + beta * n1 + gamma * n2);
     intersection.material_id = triangle.material_id;
 
     return true;
@@ -220,21 +239,21 @@ vec3 sample_light(light_t light, uint i)
 
 void reflect_ray(inout ray_t ray, vec3 normal)
 {
-        ray.direction = ray.direction - 2.0 * dot(normal, ray.direction) * normal;
+    ray.direction = ray.direction - 2.0 * dot(normal, ray.direction) * normal;
 }
 
 vec3 diffuse_lambert(vec3 base_color)
 {
-        return base_color * (1 / PI);
+    return base_color * (1 / PI);
 }
 
 float d_beckmann(float roughness, float dot_n_h)
 {
-        float a = roughness * roughness;
-        float a_sq = a * a;
-        float dot_n_h_sq = dot_n_h  * dot_n_h ;
+    float a = roughness * roughness;
+    float a_sq = a * a;
+    float dot_n_h_sq = dot_n_h  * dot_n_h ;
 
-        return exp((dot_n_h_sq - 1) / (a_sq * dot_n_h_sq)) / (PI * a_sq * dot_n_h_sq * dot_n_h_sq);
+    return exp((dot_n_h_sq - 1) / (a_sq * dot_n_h_sq)) / (PI * a_sq * dot_n_h_sq * dot_n_h_sq);
 }
 
 // This is G over dot_n_in * dot_n_out.
@@ -264,25 +283,28 @@ vec3 brdf(vec3 out_dir, vec3 in_dir, intersection_t intersection)
 
     vec3 half_vec = normalize(out_dir + in_dir);
 
-    float dot_n_in = dot(intersection.normal, in_dir);
-    float dot_n_out = dot(intersection.normal, out_dir);
-    float dot_n_h = dot(intersection.normal, half_vec);
-    float dot_h_in = dot(intersection.normal, half_vec);
+    float dot_n_in = max(0.0, dot(intersection.normal, in_dir));
+    float dot_n_out = max(0.0, dot(intersection.normal, out_dir));
+    float dot_n_h = max(0.0, dot(intersection.normal, half_vec));
+    float dot_h_in = max(0.0, dot(intersection.normal, half_vec));
 
+    // TODO: precompute.
     vec3 diffuse_color = base_color - base_color * metallic;
     vec3 specular_color = mix(vec3(0.025, 0.025, 0.025), diffuse_color, metallic);
 
     vec3 diffuse = diffuse_lambert(diffuse_color);
     vec3 f = f_schlick(specular_color, dot_h_in);
     float g_reduced = g_reduced_shlick(roughness, dot_n_in, dot_n_out);
-    float d = d_beckmann(roughness, dot_n_h);
+    float d = max(0.0, d_beckmann(roughness, dot_n_h));
 
-    return diffuse + (f * g_reduced * d) / 4.0;
+    return diffuse + (g_reduced * f * d);
 }
 
 vec3 shade(vec3 out_dir, vec3 in_dir, intersection_t intersection, vec3 light_color, float light_power)
 {
-    return light_color * light_power * brdf(out_dir, in_dir, intersection);
+    float projection_term = max(0.0, dot(in_dir, intersection.normal));
+
+    return light_color * light_power * brdf(out_dir, in_dir, intersection) * projection_term;
 }
 
 
@@ -294,13 +316,19 @@ intersection_t intersect_geometry(ray_t ray)
     for(uint i = 0; i < triangles.length(); ++i)
     {
         intersection_t current_intersection;
+        // Apparently have to use temporaries in order to avoid the
+        // "OpFunctionCall Argument <id> '520's type does not match Function <id> '24's parameter type"
+        // bug.
+        // https://github.com/KhronosGroup/glslang/issues/988
+        triangle_t triangle = triangles[i];
 
-        if(intersect_triangle(ray, triangles[i], intersection))
+        if(intersect_triangle(ray, triangle, current_intersection))
         {
             if(current_intersection.t < intersection.t)
             {
                 intersection = current_intersection;
             }
+
         }
     }
 
@@ -315,38 +343,42 @@ vec3 direct_lighting(ray_t ray)
 
     intersection_t intersection = intersect_geometry(ray);
 
-    if(intersection.t < INFINITY)
+    if(intersection.t < INFINITY && intersection.t > 0)
     {
         for(uint i = 0; i < lights.length(); ++i)
         {
             vec3 intersection_point = ray.origin + intersection.t * ray.direction;
 
-            if(dot(lights[i].point - intersection_point, lights[i].normal) > 0)
+            if(dot(intersection_point - lights[i].point, lights[i].normal) > 0)
             {
-                float sample_power = lights[i].power / light_samples;
+                // Trying to avoid this https://github.com/KhronosGroup/glslang/issues/988
+                light_t light = lights[i];
+
+                float sample_power = light.power / light_samples;
 
                 for(uint j = 0; j < light_samples; ++j)
                 {
-                    vec3 light_sample = sample_light(lights[i], j);
-
+                    vec3 light_sample = sample_light(light, j);
 
                     ray_t shadow_ray;
-                    shadow_ray.origin = intersection_point + intersection.normal * BIAS;
-                    vec3 shadow_ray_vector = light_sample - intersection_point;
+                    shadow_ray.origin = light_sample;
+                    vec3 shadow_ray_vector = intersection_point - light_sample;
                     shadow_ray.direction = normalize(shadow_ray_vector);
 
                     intersection_t shadow = intersect_geometry(shadow_ray);
 
                     float light_distance = length(shadow_ray_vector);
 
-                    if(shadow.t > light_distance)
+                    if(abs(shadow.t - light_distance) < BIAS)
                     {
                         output_color += shade(
                                                 -ray.direction,
-                                                shadow_ray.direction,
+                                                -shadow_ray.direction,
                                                 intersection,
                                                 lights[i].color,
-                                                sample_power / (light_distance * light_distance)
+                                                sample_power /
+                                                (light_distance * light_distance) *
+                                                dot(shadow_ray.direction, light.normal)
                                               );
                     }
                 }
@@ -378,29 +410,30 @@ void main()
 
 
 
-    float fov_scale = 1.0 / tan(radians(camera.fov));
+    float fov_scale = 1.0 / tan(radians(camera.fov) / 2.0);
 
     vec2 image_scale = 1.0 / imageSize(render_output);
     vec2 camera_scale = fov_scale * vec2(camera.aspect_ratio, 1.0);
 
-    vec2 raster_coords = gl_GlobalInvocationID.xy * image_scale ;
-
-
+    vec2 raster_coords = gl_GlobalInvocationID.xy * image_scale;
 
     for(uint pixel_sample = 0; pixel_sample < samples_per_pixel; ++pixel_sample)
     {
-        float seqn = van_der_corput(pixel_sample);
-        vec2 screen_coords = (2.0 * raster_coords + seqn * image_scale - 1.0) * camera_scale;
+        float sample_seq = van_der_corput(pixel_sample);
+        vec2 biased_raster_coords = raster_coords + sample_seq * image_scale;
+        vec2 screen_coords = (2.0 * biased_raster_coords - 1.0) *
+                              vec2(1.0, -1.0) *
+                              camera_scale;
 
         ray_t ray;
-        ray.origin = camera.origin;
 
-        vec3 screen_point = ray.origin +
-                            camera.front +
-                            camera.left * screen_coords.x +
-                            camera.up * screen_coords.y;
+        ray.direction = normalize(
+                                   camera.front +
+                                   camera.left * screen_coords.x +
+                                   camera.up  * screen_coords.y
+                                 );
 
-        ray.direction = normalize(screen_point - ray.origin);
+        ray.origin = camera.origin + camera.near * ray.direction;
 
         output_color += raytrace(ray);
     }
