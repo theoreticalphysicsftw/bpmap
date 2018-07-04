@@ -1,0 +1,162 @@
+#ifndef GEOMETRY_INCLUDED
+#define GEOMETRY_INCLUDED
+
+struct ray_t
+{
+    vec3 origin;
+    vec3 direction;
+};
+
+struct intersection_t
+{
+    vec3 normal;
+    float t;
+    uint material_id;
+};
+
+struct attribute_index_t
+{
+    uint vertex_index;
+    uint normal_index;
+    uint texcoord_index;
+};
+
+struct triangle_idx_t
+{
+    attribute_index_t vertices[3];
+    uint material_id;
+};
+
+
+layout(set = 0, binding = 2, std430) buffer triangles_t
+{
+    triangle_idx_t triangles[];
+};
+
+
+// Abuse std430 rules to avoid padding.
+struct std430vec3_t
+{
+    float x;
+    float y;
+    float z;
+};
+
+layout(set = 0, binding = 3, std430) buffer vertices_t
+{
+    std430vec3_t vertices[];
+};
+
+
+layout(set = 0, binding = 4, std430) buffer normals_t
+{
+    std430vec3_t normals[];
+};
+
+
+layout(set = 0, binding = 5, std430) buffer texcoords_t
+{
+    vec2 texcoords[];
+};
+
+
+struct material_t
+{
+    vec3 base_color;
+    float roughness;
+    float metallic;
+};
+
+
+layout(set = 0, binding = 6, std430) buffer materials_t
+{
+    material_t materials[];
+};
+
+
+struct light_t
+{
+    vec3 point;
+    // It would've been automatically done by the compiler.
+    float pad1;
+
+    vec3 normal;
+    float pad2;
+
+    vec3 basis_vec0;
+    float param0_max;
+
+    vec3 basis_vec1;
+    float param1_max;
+
+    vec3 color;
+    float power;
+};
+
+
+layout(set = 0, binding = 7, std430) buffer lights_t
+{
+    light_t lights[];
+};
+
+
+bool intersect_triangle(ray_t ray, triangle_idx_t triangle, inout intersection_t intersection)
+{
+    std430vec3_t tv0 = vertices[triangle.vertices[0].vertex_index];
+    std430vec3_t tv1 = vertices[triangle.vertices[1].vertex_index];
+    std430vec3_t tv2 = vertices[triangle.vertices[2].vertex_index];
+    std430vec3_t tn0 = normals[triangle.vertices[0].normal_index];
+    std430vec3_t tn1 = normals[triangle.vertices[1].normal_index];
+    std430vec3_t tn2 = normals[triangle.vertices[2].normal_index];
+    vec3 v0 = vec3(tv0.x, tv0.y, tv0.z);
+    vec3 v1 = vec3(tv1.x, tv1.y, tv1.z);
+    vec3 v2 = vec3(tv2.x, tv2.y, tv2.z);
+    vec3 n0 = vec3(tn0.x, tn0.y, tn0.z);
+    vec3 n1 = vec3(tn1.x, tn1.y, tn1.z);
+    vec3 n2 = vec3(tn2.x, tn2.y, tn2.z);
+
+    float alpha;
+    float beta;
+    float gamma;
+
+    vec3 v0v2 = v2 - v0;
+    vec3 v1v2 = v2 - v1;
+    vec3 p = cross(v1v2, ray.direction);
+    float det = dot(v0v2, p);
+
+
+    if (abs(det) < EPSILON)
+    {
+        return false;
+    }
+
+    float inv_det = 1.0 / det;
+
+    vec3 r = v2 - ray.origin;
+
+    alpha = dot(r, p) * inv_det;
+
+    if (alpha < 0 || alpha > 1)
+    {
+        return false;
+    }
+
+    beta = dot(cross(ray.direction, v0v2), r) * inv_det;
+
+    if (beta < 0 || alpha + beta > 1)
+    {
+        return false;
+    }
+
+    gamma = 1 - beta - alpha;
+
+    intersection.t = dot(cross(v0v2, v1v2), r) * inv_det;
+
+    // Fill intersection info
+    intersection.normal = normalize(alpha * n0 + beta * n1 + gamma * n2);
+    intersection.material_id = triangle.material_id;
+
+    return true;
+}
+
+#endif

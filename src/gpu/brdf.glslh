@@ -1,0 +1,58 @@
+// Copyright 2018 Mihail Mladenov
+//
+// This file is part of bpmap.
+//
+// bpmap is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// bpmap is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+#ifndef BRDF_INCLUDED
+#define BRDF_INCLUDED
+
+#include "common.glslh"
+
+vec3 diffuse_lambert(vec3 base_color)
+{
+    return base_color * (1 / PI);
+}
+
+float d_beckmann(float roughness, float dot_n_h)
+{
+    float a = roughness * roughness;
+    float a_sq = a * a;
+    float dot_n_h_sq = dot_n_h  * dot_n_h ;
+
+    return exp((dot_n_h_sq - 1) / (a_sq * dot_n_h_sq)) / (PI * a_sq * dot_n_h_sq * dot_n_h_sq);
+}
+
+// This is G over dot_n_in * dot_n_out.
+float g_reduced_shlick(float roughness, float dot_n_in, float dot_n_out)
+{
+    float k = roughness * SQRT_TWO_OVER_PI;
+    float one_minus_k = 1 - k;
+
+    float denom_in = dot_n_in * one_minus_k + k;
+    float denom_out = dot_n_out * one_minus_k + k;
+
+    return 1.0 / (denom_in * denom_out);
+}
+
+vec3 f_schlick(vec3 specular_color, float dot_h_in)
+{
+    float f_lambda = pow5(1 - dot_h_in);
+
+    return specular_color + (1.0 - specular_color) * f_lambda;
+}
+
+#endif
