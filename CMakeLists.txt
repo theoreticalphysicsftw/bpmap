@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
+
+cmake_policy(SET CMP0015 NEW)
+cmake_policy(SET CMP0081 NEW)
 
 project(bpmap)
 
@@ -48,10 +51,19 @@ message("Compiled ${ov2}.")
 message("Compiled ${ov3}.")
 message("Compiled ${ov4}.")
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release")
+endif(NOT CMAKE_BUILD_TYPE)
+
+if(NOT (DEFINED DONT_COPY_TEST_SCENE))
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_scene/b5.obj ${CMAKE_CURRENT_BINARY_DIR}/b5.obj COPYONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_scene/b5.mtl ${CMAKE_CURRENT_BINARY_DIR}/b5.mtl COPYONLY)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_scene/scene.bpmap ${CMAKE_CURRENT_BINARY_DIR}/scene.bpmap COPYONLY)
+endif()
+
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEFAULT>:${RELEASE_OPTIONS}>")
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:DEBUG>:${DEBUG_OPTIONS}>")
-target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:RELEASE>:${RELEASE_OPTIONS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Debug>:${DEBUG_OPTIONS}>")
+target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:Release>:${RELEASE_OPTIONS}>")
 target_link_libraries(${PROJECT_NAME} "glfw")
 target_link_libraries(${PROJECT_NAME} "vulkan")
 

@@ -1,25 +1,9 @@
-# Blender MTL File: 'b4.obj'
-# Material Count: 2
+# Blender MTL File: 'None'
+# Material Count: 1
 
 newmtl None
 Kd 0.01000 0.510000 0.520000
 Ks 0.742000 0.999999 0.999999
-Pr 0.10000
-Pm 0.500000
+Pr 0.8000
+Pm 0.120000
 d 1.0
-
-newmtl Refl
-Kd 0.880000 0.520000 0.520000
-Ks 0.742000 0.999999 0.999999
-Pr 0.1000
-Pm 0.5000
-d 1.0
-
-
-newmtl None0
-Kd 0.520000 0.520000 0.720000
-Ks 0.742000 0.999999 0.999999
-Pr 0.20000
-Pm 0.400000
-d 1.0
-
