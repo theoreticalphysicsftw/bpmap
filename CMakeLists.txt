@@ -1,7 +1,22 @@
-cmake_minimum_required(VERSION 2.8.12)
+# Copyright 2018-2023 Mihail Mladenov
+#
+# This file is part of bpmap.
+#
+# bpmap is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# bpmap is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
-cmake_policy(SET CMP0015 NEW)
-cmake_policy(SET CMP0081 NEW)
+
+cmake_minimum_required(VERSION 3.5)
 
 project(bpmap)
 
@@ -14,17 +29,16 @@ endif()
 set(RELEASE_OPTIONS "-O3" "-fno-exceptions" "-std=c++17")
 set(DEBUG_OPTIONS "-g" "-O0" "-std=c++17")
 
-list(APPEND SOURCE_FILES "src/main.cpp")
-list(APPEND SOURCE_FILES "src/application.cpp")
-list(APPEND SOURCE_FILES "src/window/window.cpp")
-list(APPEND SOURCE_FILES "src/scene/scene.cpp")
-list(APPEND SOURCE_FILES "src/scene/scene_loader.cpp")
-list(APPEND SOURCE_FILES "src/core/io.cpp")
-list(APPEND SOURCE_FILES "src/vulkan/vulkan.cpp")
-list(APPEND SOURCE_FILES "src/vulkan/gui_renderer.cpp")
-list(APPEND SOURCE_FILES "src/vulkan/renderer.cpp")
-list(APPEND SOURCE_FILES "src/gui/gui.cpp")
-list(APPEND SOURCE_FILES "src/error.cpp")
+file(
+      GLOB
+      SOURCE_FILES
+      "src/*"
+      "src/window/*"
+      "src/scene/*"
+      "src/core/*"
+      "src/vulkan/*"
+      "src/gui/*"
+    )
 
 include_directories("src")
 include_directories("third_party")
