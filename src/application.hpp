@@ -39,11 +39,9 @@ namespace bpmap
         gui_t gui;
         scene_t scene;
 
-        error_t error;
-
     public:
 
-        application_t();
+        application_t(uint32_t res_x, uint32_t res_y, const string_t& name);
 
         void loop();
     };

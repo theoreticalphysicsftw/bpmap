@@ -1,4 +1,4 @@
-// Copyright 2018 Mihail Mladenov
+// Copyright 2018-2023 Mihail Mladenov
 //
 // This file is part of bpmap.
 //
@@ -27,10 +27,11 @@
 
 #include "../window/window.hpp"
 
+#include "image.hpp"
+
 namespace bpmap
 {
     class vk_buffer_t;
-    class vk_image_t;
     class vk_command_pool_t;
     class vk_semaphore_t;
     class vk_fence_t;
@@ -55,12 +56,9 @@ namespace bpmap
         VkPhysicalDevice gpu_device;
         uint32_t queue_index;
 
-
         window_t* window;
 
-        error_t error;
-
-        error_t create_instance();
+        error_t create_instance(const string_t& app_name);
         error_t find_gpu(VkPhysicalDevice&);
 
         template <typename Lambda>
@@ -96,8 +94,6 @@ namespace bpmap
 
     public:
 
-        error_t get_status() const { return error;}
-
         error_t init(window_t&);
 
         error_t create_buffer(
@@ -105,16 +101,20 @@ namespace bpmap
                                const VkBufferCreateInfo& bci,
                                const VmaAllocationCreateInfo& aci
                              ) const;
+
         error_t create_image(
                               vk_image_t& image,
-                              const VkImageCreateInfo& ici,
-                              const VmaAllocationCreateInfo& aci
+                              uint32_t width,
+                              uint32_t height,
+                              vk_image_format_t format = vk_image_format_t::rgba32f,
+                              vk_image_tiling_t tiling = vk_image_tiling_t::linear,
+                              bool on_gpu = true,
+                              uint32_t usage = vk_usage_sampled | vk_usage_storage,
+                              uint32_t samples = 1,
+                              uint32_t mips = 1,
+                              uint32_t layers = 1
                             ) const;
 
-        error_t create_image_view(
-                                   VkImageView& image_view,
-                                   VkImageViewCreateInfo& ivci
-                                 ) const;
         error_t create_sampler(
                                 VkSampler& sampler,
                                 const VkSamplerCreateInfo& sci
@@ -213,8 +213,6 @@ namespace bpmap
     {
         friend class vulkan_t;
 
-
-
         VmaAllocation allocation;
         VmaAllocator allocator;
 
@@ -229,20 +227,6 @@ namespace bpmap
         ~vk_buffer_t();
     };
 
-
-    class vk_image_t
-    {
-        friend class vulkan_t;
-
-        VmaAllocation allocation;
-        VmaAllocator allocator;
-
-    public:
-        VkImage image;
-
-        vk_image_t();
-        ~vk_image_t();
-    };
 
 
     class vk_command_pool_t

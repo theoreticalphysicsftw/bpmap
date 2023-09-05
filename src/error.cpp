@@ -16,6 +16,8 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#include <cstdlib>
+
 #include "error.hpp"
 
 namespace bpmap
@@ -158,6 +160,15 @@ namespace bpmap
 
             default:
                 return "Unknown error occured";
+        }
+    }
+
+    void verify(error_t e)
+    {
+        if (e != error_t::success)
+        {
+            log_error(get_error_message(e));
+            std::abort();
         }
     }
 }

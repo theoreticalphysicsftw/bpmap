@@ -68,7 +68,6 @@ namespace bpmap
     template<typename T>
     using hash_set_t = std::unordered_set<T>;
 
-    constexpr const char_t* app_name = "bpmap";
 }
 
 #endif // COMMON_HPP

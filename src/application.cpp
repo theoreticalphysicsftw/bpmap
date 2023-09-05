@@ -24,63 +24,38 @@
 namespace bpmap
 {
 
-    application_t::application_t()
+    application_t::application_t(uint32_t res_x, uint32_t res_y, const string_t& app_name)
     {
-        error = window.init({1280,720, app_name});
-
-        if(error != error_t::success)
-        {
-            return;
-        }
+        verify(window.init({res_x, res_y, app_name}));
 
         // TODO: remove hardcoded scene and add an option to select from UI.
-        error = load_scene("scene.bpmap", scene);
+        verify(load_scene("scene.bpmap", scene));
+        verify(vulkan.init(window));
+        gui.bind_window(window);
 
-        if(error != error_t::success)
-        {
-            return;
-        }
+        renderer.bind_vulkan(vulkan);
+        renderer.bind_scene(scene);
 
-        if(error == error_t::success)
-        {
-            error = vulkan.init(window);
-            gui.bind_window(window);
-
-            renderer.bind_vulkan(vulkan);
-            renderer.bind_scene(scene);
-
-            if(error == error_t::success)
-            {
-                error = renderer.init();
+        verify(renderer.init());
 
 
-                gui_renderer.bind_gui(gui);
-                gui_renderer.bind_vulkan(vulkan);
-                gui_renderer.bind_renderer(renderer);
+        gui_renderer.bind_gui(gui);
+        gui_renderer.bind_vulkan(vulkan);
+        gui_renderer.bind_renderer(renderer);
 
-                if(error == error_t::success)
-                {
-                     error = gui_renderer.init();
-                }
-            }
+        verify(gui_renderer.init());
 
-            renderer.build_command_buffers();
-            renderer.submit_command_buffers();
-        }
+        verify(renderer.build_command_buffers());
+        verify(renderer.submit_command_buffers());
     }
 
     void application_t::loop()
     {
-        if(error != error_t::success)
-        {
-            std::cerr<<"Error: "<<get_error_message(error)<<std::endl;
-            std::exit(~0);
-        }
-
         static constexpr uint32_t frame_limit = 60;
 
         auto t0 = std::chrono::high_resolution_clock::now();
 
+        uint32_t frames = 0;
         while(!window.closed())
         {
             window.poll_events();
@@ -92,6 +67,7 @@ namespace bpmap
                 t0 = t1;
                 gui_renderer.render_frame();
             }
+            frames++;
         }
     }
 }

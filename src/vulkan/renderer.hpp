@@ -80,10 +80,11 @@ namespace bpmap
         error_t build_command_buffers();
         error_t submit_command_buffers();
 
-        VkImageView render_output_view;
         VkSampler render_output_sampler;
 
         ~renderer_t();
+
+        const vk_image_t& get_output() const { return render_output; }
     };
 
 }

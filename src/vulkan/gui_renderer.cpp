@@ -29,32 +29,18 @@ namespace bpmap
         extent.width = gui->get_font_width();
         extent.depth = 1;
 
-        VkImageCreateInfo ici = {};
-        ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        ici.pNext = nullptr;
-        ici.flags = 0;
-        ici.imageType = VK_IMAGE_TYPE_2D;
-        ici.arrayLayers = 1;
-        ici.mipLevels = 1;
-        ici.samples = VK_SAMPLE_COUNT_1_BIT;
-        ici.format = VK_FORMAT_R8G8B8A8_UNORM;
-        ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        ici.tiling = VK_IMAGE_TILING_OPTIMAL;
-        ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        ici.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        ici.pQueueFamilyIndices = nullptr;
-        ici.queueFamilyIndexCount = 0;
-        ici.extent = extent;
 
-        VmaAllocationCreateInfo aci = {};
-        aci.pool = VK_NULL_HANDLE;
-        aci.flags = 0;
-        aci.preferredFlags = 0;
-        aci.requiredFlags = 0;
-        aci.pUserData = nullptr;
-        aci.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        if(vulkan->create_image(font_image, ici, aci) != error_t::success)
+        auto result = vulkan->create_image(
+                                            font_image,
+                                            gui->get_font_width(),
+                                            gui->get_font_height(),
+                                            vk_image_format_t::rgba8u,
+                                            vk_image_tiling_t::optimal,
+                                            true,
+                                            vk_usage_transfer_dst | vk_usage_sampled
+                                          );
+ 
+        if(result != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -226,27 +212,6 @@ namespace bpmap
 
         gui->finalize_font_atlas();
 
-        VkImageViewCreateInfo ivci = {};
-        ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        ivci.pNext = nullptr;
-        ivci.flags = 0;
-        ivci.format = VK_FORMAT_R8G8B8A8_UNORM;
-        ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        ivci.subresourceRange = isr;
-        ivci.image = font_image.image;
-        ivci.components = {
-                            VK_COMPONENT_SWIZZLE_R,
-                            VK_COMPONENT_SWIZZLE_G,
-                            VK_COMPONENT_SWIZZLE_B,
-                            VK_COMPONENT_SWIZZLE_A
-                           };
-
-
-        if(vulkan->create_image_view(font_view, ivci) != error_t::success)
-        {
-            return error_t::font_texture_setup_fail;
-        }
-
 
         VkSamplerCreateInfo sci = {};
         sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -340,12 +305,12 @@ namespace bpmap
 
         VkDescriptorImageInfo font_texture_bind_info = {};
         font_texture_bind_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        font_texture_bind_info.imageView = font_view;
+        font_texture_bind_info.imageView = font_image.view;
         font_texture_bind_info.sampler = font_sampler;
 
         VkDescriptorImageInfo render_output_bind_info = {};
         render_output_bind_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        render_output_bind_info.imageView = renderer->render_output_view;
+        render_output_bind_info.imageView = renderer->get_output().view;
         render_output_bind_info.sampler = renderer->render_output_sampler;
 
         VkWriteDescriptorSet wds[2] = {};
@@ -562,7 +527,7 @@ namespace bpmap
         attachment_description.flags = 0;
         attachment_description.format = vulkan->get_swapchain_format();
         attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

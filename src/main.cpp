@@ -1,4 +1,4 @@
-// Copyright 2018 Mihail Mladenov
+// Copyright 2018-2023 Mihail Mladenov
 //
 // This file is part of bpmap.
 //
@@ -20,8 +20,11 @@
 
 int main()
 {
-    bpmap::application_t app;
+    constexpr const char* app_name = "bpmap";
+    constexpr const uint32_t res_x = 1280;
+    constexpr const uint32_t res_y = 720;
 
+    bpmap::application_t app(res_x, res_y, app_name);
     app.loop();
 
     return 0;

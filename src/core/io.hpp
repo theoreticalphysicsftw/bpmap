@@ -19,12 +19,25 @@
 #ifndef IO_HPP
 #define IO_HPP
 
+#include <iostream>
 
 #include "common.hpp"
 
 namespace bpmap
 {
     bool read_whole_file(const string_t& path, darray_t<uint8_t>& data);
+
+    template <typename... Ts>
+    void log(Ts... types)
+    {
+        (std::cout << ... << types) << std::endl;
+    }
+
+    template <typename... Ts>
+    void log_error(Ts... types)
+    {
+        (std::cerr << ... << types) << std::endl;
+    }
 }
 
 #endif // IO_HPP

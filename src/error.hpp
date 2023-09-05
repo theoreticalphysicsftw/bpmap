@@ -1,7 +1,8 @@
 #ifndef ERROR_HPP
 #define ERROR_HPP
 
-#include <common.hpp>
+#include "common.hpp"
+#include "core/io.hpp"
 
 namespace bpmap
 {
@@ -56,6 +57,7 @@ namespace bpmap
     };
 
     string_t get_error_message(error_t e);
+    void verify(error_t);
 }
 
 #endif // ERROR_HPP

@@ -62,6 +62,7 @@ namespace bpmap
 
         uint32_t get_height() const { return parameters.height; }
         uint32_t get_width() const { return parameters.width; }
+        const string_t& get_name() const { return parameters.name; }
 
         bool_t mouse_button_pressed(mouse_button_t button) const;
         pair_t<int_t, int_t> get_mouse_pos() const;

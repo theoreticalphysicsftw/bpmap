@@ -1,4 +1,4 @@
-// Copyright 2018 Mihail Mladenov
+// Copyright 2018-2023 Mihail Mladenov
 //
 // This file is part of bpmap.
 //
@@ -15,37 +15,40 @@
 // You should have received a copy of the GNU General Public License
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
+
 #include <algorithm>
 #include <limits>
 
 #define VMA_IMPLEMENTATION
 #include "vulkan.hpp"
 
+#include "io.hpp"
+
 namespace bpmap
 {
-
     error_t vulkan_t::init(window_t& win)
     {
         window = &win;
 
-        error = create_instance();
+        error_t error;
+        error = create_instance(win.get_name());
 
-       if(error == error_t::success)
-       {
+        if(error == error_t::success)
+        {
             error = create_logical_device();
-       }
-       if(error == error_t::success)
-       {
+        }
+        if(error == error_t::success)
+        {
            error = get_queues();
-       }
-       if(error == error_t::success)
-       {
+        }
+        if(error == error_t::success)
+        {
            error = create_surface_and_swapchain();
-       }
-       if(error == error_t::success)
-       {
+        }
+        if(error == error_t::success)
+        {
            error = create_allocator();
-       }
+        }
 
        return error;
     }
@@ -77,32 +80,34 @@ namespace bpmap
         return error_t::success;
     }
 
-
     error_t vulkan_t::create_image(
-                                    vk_image_t &image,
-                                    const VkImageCreateInfo &ici,
-                                    const VmaAllocationCreateInfo &aci
-                                   ) const
+                                    vk_image_t& image,
+                                    uint32_t width,
+                                    uint32_t height,
+                                    vk_image_format_t format,
+                                    vk_image_tiling_t tiling,
+                                    bool on_gpu,
+                                    uint32_t usage,
+                                    uint32_t samples,
+                                    uint32_t mips,
+                                    uint32_t layers
+                                  ) const
     {
-        if(
-            vmaCreateImage(
-                            allocator,
-                            &ici,
-                            &aci,
-                            &image.image,
-                            &image.allocation,
-                            nullptr
-                           )
-           != VK_SUCCESS
-          )
-        {
-            return error_t::image_creation_fail;
-        }
-
-        image.allocator = allocator;
-
-        return error_t::success;
+        return image.create(
+                             device,
+                             allocator,
+                             width,
+                             height,
+                             format,
+                             tiling,
+                             on_gpu,
+                             usage,
+                             samples,
+                             mips,
+                             layers
+                           );
     }
+
 
     void vulkan_t::destroy_image_view(VkImageView image_view) const
     {
@@ -176,16 +181,6 @@ namespace bpmap
         return error_t::success;
     }
 
-
-    error_t vulkan_t::create_image_view(VkImageView &image_view, VkImageViewCreateInfo &ivci) const
-    {
-        if(vkCreateImageView(device, &ivci, nullptr, &image_view) != VK_SUCCESS)
-        {
-            return error_t::image_view_creation_fail;
-        }
-
-        return error_t::success;
-    }
 
     error_t vulkan_t::create_sampler(VkSampler &sampler, const VkSamplerCreateInfo &sci) const
     {
@@ -321,20 +316,20 @@ namespace bpmap
         vkDestroyShaderModule(device, shader, nullptr);
     }
 
-    error_t vulkan_t::create_instance()
+    error_t vulkan_t::create_instance(const string_t& name)
     {
         VkApplicationInfo appinfo = {};
         appinfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appinfo.apiVersion = VK_API_VERSION_1_0;
         appinfo.applicationVersion = 1;
-        appinfo.pApplicationName = app_name;
+        appinfo.pApplicationName = name.c_str();
         appinfo.engineVersion = 1;
-        appinfo.pEngineName = app_name;
+        appinfo.pEngineName = name.c_str();
         appinfo.pNext = nullptr;
 
 #if defined(BPMAP_DEBUG)
         uint32_t validation_layers_count = 1;
-        const char_t* validation_layers[1] = {"VK_LAYER_LUNARG_standard_validation"};
+        const char_t* validation_layers[1] = {"VK_LAYER_KHRONOS_validation"};
 #else
         uint32_t validation_layers_count = 0;
         const char_t* const* validation_layers = nullptr;
@@ -351,7 +346,8 @@ namespace bpmap
         info.ppEnabledExtensionNames = extensions.data();
         info.flags = 0;
 
-        if(vkCreateInstance(&info, nullptr, &instance) == VK_SUCCESS)
+        auto result = vkCreateInstance(&info, nullptr, &instance);
+        if(result == VK_SUCCESS)
         {
             return error_t::success;
         }
@@ -368,7 +364,13 @@ namespace bpmap
         std::vector<std::pair<VkPhysicalDevice, uint32_t>> gpus;
         uint32_t physical_devices_count;
 
-        vkEnumeratePhysicalDevices(instance, &physical_devices_count, nullptr);
+        auto result = vkEnumeratePhysicalDevices(instance, &physical_devices_count, nullptr);
+
+        if (result != VK_SUCCESS)
+        {
+            return error_t::device_search_fail;
+        }
+
         physical_devices.resize(physical_devices_count);
         vkEnumeratePhysicalDevices(instance, &physical_devices_count, physical_devices.data());
 

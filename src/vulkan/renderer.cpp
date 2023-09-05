@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <limits>
 
 #include <core/io.hpp>
 
@@ -211,37 +212,18 @@ namespace bpmap
 
     error_t renderer_t::create_image()
     {
-        VkExtent3D extent = {};
-        extent.height = scene->settings.resolution_y;
-        extent.width = scene->settings.resolution_x;
-        extent.depth = 1;
 
-        VkImageCreateInfo ici = {};
-        ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        ici.pNext = nullptr;
-        ici.flags = 0;
-        ici.imageType = VK_IMAGE_TYPE_2D;
-        ici.arrayLayers = 1;
-        ici.mipLevels = 1;
-        ici.samples = VK_SAMPLE_COUNT_1_BIT;
-        ici.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        ici.tiling = VK_IMAGE_TILING_LINEAR;
-        ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        ici.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        ici.pQueueFamilyIndices = nullptr;
-        ici.queueFamilyIndexCount = 0;
-        ici.extent = extent;
+        auto result = vulkan->create_image(
+                                            render_output,
+                                            scene->settings.resolution_x,
+                                            scene->settings.resolution_y,
+                                            vk_image_format_t::rgba32f,
+                                            vk_image_tiling_t::linear,
+                                            true,
+                                            vk_usage_storage | vk_usage_sampled
+                                           );
 
-        VmaAllocationCreateInfo aci = {};
-        aci.pool = VK_NULL_HANDLE;
-        aci.flags = 0;
-        aci.preferredFlags = 0;
-        aci.requiredFlags = 0;
-        aci.pUserData = nullptr;
-        aci.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        if(vulkan->create_image(render_output, ici, aci) != error_t::success)
+        if(result != error_t::success)
         {
             return error_t::render_output_setup_fail;
         }
@@ -325,28 +307,7 @@ namespace bpmap
 
         vulkan->wait_for_fence(tmp_fence, timeout);
 
-        // Create View and Sampler.
-
-        VkImageViewCreateInfo ivci = {};
-        ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        ivci.pNext = nullptr;
-        ivci.flags = 0;
-        ivci.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        ivci.subresourceRange = isr;
-        ivci.image = render_output.image;
-        ivci.components = {
-                            VK_COMPONENT_SWIZZLE_R,
-                            VK_COMPONENT_SWIZZLE_G,
-                            VK_COMPONENT_SWIZZLE_B,
-                            VK_COMPONENT_SWIZZLE_A
-                           };
-
-        if(vulkan->create_image_view(render_output_view, ivci) != error_t::success)
-        {
-            return error_t::render_output_setup_fail;
-        }
-
+        // Create Sampler.
         VkSamplerCreateInfo sci = {};
         sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sci.pNext = nullptr;
@@ -375,7 +336,6 @@ namespace bpmap
 
     renderer_t::~renderer_t()
     {
-        vulkan->destroy_image_view(render_output_view);
         vulkan->destroy_sampler(render_output_sampler);
         vulkan->destroy_shader(raytrace);
         vulkan->destroy_descriptor_pool(descriptor_pool);
@@ -714,7 +674,7 @@ namespace bpmap
         VkDescriptorImageInfo render_output_info;
         render_output_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         render_output_info.sampler = render_output_sampler;
-        render_output_info.imageView = render_output_view;
+        render_output_info.imageView = render_output.view;
 
         wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[1].pNext = nullptr;
@@ -897,6 +857,4 @@ namespace bpmap
     {
         return vulkan->create_command_pool(command_pool);
     }
-
-
 }
