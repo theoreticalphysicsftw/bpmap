@@ -82,30 +82,10 @@ namespace bpmap
 
     error_t vulkan_t::create_image(
                                     vk_image_t& image,
-                                    uint32_t width,
-                                    uint32_t height,
-                                    vk_image_format_t format,
-                                    vk_image_tiling_t tiling,
-                                    bool on_gpu,
-                                    uint32_t usage,
-                                    uint32_t samples,
-                                    uint32_t mips,
-                                    uint32_t layers
+                                    const vk_image_desc_t& desc
                                   ) const
     {
-        return image.create(
-                             device,
-                             allocator,
-                             width,
-                             height,
-                             format,
-                             tiling,
-                             on_gpu,
-                             usage,
-                             samples,
-                             mips,
-                             layers
-                           );
+        return image.create(device, allocator, desc);
     }
 
 
@@ -299,22 +279,17 @@ namespace bpmap
         }
     }
 
-    error_t vulkan_t::create_shader( VkShaderModule& shader,
-                           const VkShaderModuleCreateInfo& smci
-                         ) const
-    {
-        if(vkCreateShaderModule(device, &smci, nullptr, &shader) != VK_SUCCESS)
-        {
-            return error_t::shader_creation_fail;
-        }
 
-        return error_t::success;
+    error_t vulkan_t::create_shader(
+                                     vk_shader_t& shader,
+                                     const uint32_t* data,
+                                     size_t size,
+                                     shader_stage_t type
+                                   ) const
+    {
+        return shader.create(device, data, size, type);
     }
 
-    void vulkan_t::destroy_shader(VkShaderModule shader) const
-    {
-        vkDestroyShaderModule(device, shader, nullptr);
-    }
 
     error_t vulkan_t::create_instance(const string_t& name)
     {
@@ -526,41 +501,18 @@ namespace bpmap
 
     error_t vulkan_t::create_semaphore(vk_semaphore_t& semaphore) const
     {
-        VkSemaphoreCreateInfo sci = {};
-        sci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        sci.pNext = nullptr;
-        sci.flags = 0;
-
-        if(vkCreateSemaphore(device, &sci, nullptr, &semaphore.semaphore) != VK_SUCCESS)
-        {
-            return error_t::semaphore_creation_fail;
-        }
-
-        semaphore.device = device;
-
-        return error_t::success;
+        return semaphore.create(device);
     }
 
     error_t vulkan_t::create_fence(vk_fence_t &fence) const
     {
-        VkFenceCreateInfo fci;
-        fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fci.pNext = nullptr;
-        fci.flags = 0;
-
-        if(vkCreateFence(device, &fci, nullptr, &fence.fence) != VK_SUCCESS)
-        {
-            return error_t::fence_creation_fail;
-        }
-
-        fence.device = device;
-
-        return error_t::success;
+        return fence.create(device);
     }
 
     error_t vulkan_t::wait_for_fence(const vk_fence_t &fence, uint64_t timeout) const
     {
-        auto status = vkWaitForFences(device, 1, &fence.fence, VK_TRUE, timeout);
+        auto fence_handle = fence.get_handle();
+        auto status = vkWaitForFences(device, 1, &fence_handle, VK_TRUE, timeout);
 
         if(status == VK_SUCCESS)
         {
@@ -577,7 +529,8 @@ namespace bpmap
 
     error_t vulkan_t::submit_work(const VkSubmitInfo& submit_info, const vk_fence_t& fence) const
     {
-        if(vkQueueSubmit(queue, 1, &submit_info, fence.fence) != VK_SUCCESS)
+        auto fence_handle = fence.get_handle();
+        if(vkQueueSubmit(queue, 1, &submit_info, fence_handle) != VK_SUCCESS)
         {
             return error_t::queue_submit_fail;
         }
@@ -606,7 +559,7 @@ namespace bpmap
                                device,
                                swapchain,
                                std::numeric_limits<uint64_t>::max(),
-                               semaphore.semaphore,
+                               semaphore.get_handle(),
                                VK_NULL_HANDLE,
                                &fb_index
                              );
@@ -616,6 +569,7 @@ namespace bpmap
 
     error_t vulkan_t::present_on_screen(uint32_t index, const vk_semaphore_t &wait_semaphore) const
     {
+        auto wait_handle = wait_semaphore.get_handle();
         VkPresentInfoKHR present_info = {};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.pNext = nullptr;
@@ -623,7 +577,7 @@ namespace bpmap
         present_info.swapchainCount = 1;
         present_info.pSwapchains = &swapchain;
         present_info.waitSemaphoreCount = 1;
-        present_info.pWaitSemaphores = &wait_semaphore.semaphore;
+        present_info.pWaitSemaphores = &wait_handle;
         present_info.pResults = nullptr;
 
         if(vkQueuePresentKHR(queue, &present_info) != VK_SUCCESS)
@@ -849,12 +803,12 @@ namespace bpmap
         vkDeviceWaitIdle(device);
 
         std::for_each(
-                      swapchain_image_views.begin(),
-                      swapchain_image_views.end(),
-                      [this](const VkImageView& image_view)
-                      {
-                           destroy_image_view(image_view);
-                      }
+                       swapchain_image_views.begin(),
+                       swapchain_image_views.end(),
+                       [this](const VkImageView& image_view)
+                       {
+                            destroy_image_view(image_view);
+                       }
                      );
 
         vkDestroySwapchainKHR(device, swapchain, nullptr);
@@ -863,6 +817,7 @@ namespace bpmap
         vkDestroyDevice(device, nullptr);
         vkDestroyInstance(instance, nullptr);
     }
+
 
     error_t vk_buffer_t::map(void** data)
     {
@@ -873,6 +828,7 @@ namespace bpmap
 
         return error_t::success;
     }
+
 
     void vk_buffer_t::unmap()
     {
@@ -920,34 +876,5 @@ namespace bpmap
             vkDestroyCommandPool(device, pool, nullptr);
         }
     }
-
-    vk_semaphore_t::vk_semaphore_t()
-    {
-        device = VK_NULL_HANDLE;
-        semaphore = VK_NULL_HANDLE;
-    }
-
-    vk_semaphore_t::~vk_semaphore_t()
-    {
-        if(device != VK_NULL_HANDLE)
-        {
-            vkDestroySemaphore(device, semaphore, nullptr);
-        }
-    }
-
-    vk_fence_t::vk_fence_t()
-    {
-        device = VK_NULL_HANDLE;
-        fence = VK_NULL_HANDLE;
-    }
-
-    vk_fence_t::~vk_fence_t()
-    {
-        if(device != VK_NULL_HANDLE)
-        {
-            vkDestroyFence(device, fence, nullptr);
-        }
-    }
-
 
 }

@@ -26,8 +26,6 @@
 
 namespace bpmap
 {
-    class vulkan_t;
-
     enum class vk_image_format_t
     {
         rgba8u = 0,
@@ -46,30 +44,37 @@ namespace bpmap
     static constexpr const uint32_t vk_usage_transfer_dst = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 
+    struct vk_image_desc_t
+    {
+        uint32_t width;
+        uint32_t height;
+        vk_image_format_t format = vk_image_format_t::rgba32f;
+        vk_image_tiling_t tiling = vk_image_tiling_t::optimal;
+        bool on_gpu = true;
+        uint32_t usage = vk_usage_sampled | vk_usage_storage;
+        uint32_t samples = 1;
+        uint32_t mips = 1;
+        uint32_t layers = 1;
+    };
+
     class vk_image_t
     {
-        friend class vulkan_t;
-
         VmaAllocation allocation;
         VmaAllocator allocator;
+        VkImage image;
+        VkImageView view;
+        
+        vk_image_desc_t info;
 
+    public:
         error_t create(
                         VkDevice device,
                         VmaAllocator allocator,
-                        uint32_t width,
-                        uint32_t height,
-                        vk_image_format_t format = vk_image_format_t::rgba32f,
-                        vk_image_tiling_t tiling = vk_image_tiling_t::optimal,
-                        bool on_gpu = true,
-                        uint32_t usage = vk_usage_sampled | vk_usage_storage,
-                        uint32_t samples = 1,
-                        uint32_t mips = 1,
-                        uint32_t layers = 1
+                        const vk_image_desc_t& desc
                       );
-    public:
-        VkImage image;
-        VkImageView view;
 
+        VkImage get_image() const { return image; }
+        VkImageView get_view() const { return view; }
         vk_image_t();
         ~vk_image_t();
     };

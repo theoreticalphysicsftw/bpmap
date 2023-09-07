@@ -213,17 +213,15 @@ namespace bpmap
     error_t renderer_t::create_image()
     {
 
-        auto result = vulkan->create_image(
-                                            render_output,
-                                            scene->settings.resolution_x,
-                                            scene->settings.resolution_y,
-                                            vk_image_format_t::rgba32f,
-                                            vk_image_tiling_t::linear,
-                                            true,
-                                            vk_usage_storage | vk_usage_sampled
-                                           );
-
-        if(result != error_t::success)
+        vk_image_desc_t desc;
+        desc.width = scene->settings.resolution_x;
+        desc.height = scene->settings.resolution_y;
+        desc.format = vk_image_format_t::rgba32f;
+        desc.tiling = vk_image_tiling_t::linear;
+        desc.on_gpu = true;
+        desc.usage = vk_usage_storage | vk_usage_sampled;
+        
+        if (vulkan->create_image(render_output, desc) != error_t::success)
         {
             return error_t::render_output_setup_fail;
         }
@@ -262,7 +260,7 @@ namespace bpmap
         layout_barrier.pNext = nullptr;
         layout_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         layout_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        layout_barrier.image = render_output.image;
+        layout_barrier.image = render_output.get_image();
         layout_barrier.srcAccessMask = 0;
         layout_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         layout_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -295,7 +293,7 @@ namespace bpmap
         submit_info.pWaitDstStageMask = nullptr;
         submit_info.pWaitSemaphores = nullptr;
 
-        vk_fence_t tmp_fence;
+        tmp_fence;
         vulkan->create_fence(tmp_fence);
 
         if(vulkan->submit_work(submit_info, tmp_fence) != error_t::success)
@@ -337,7 +335,6 @@ namespace bpmap
     renderer_t::~renderer_t()
     {
         vulkan->destroy_sampler(render_output_sampler);
-        vulkan->destroy_shader(raytrace);
         vulkan->destroy_descriptor_pool(descriptor_pool);
         vulkan->destroy_descriptor_set_layout(descriptor_set_layout);
         vulkan->destroy_pipeline_layout(compute_pipeline_layouts[raytrace_pipeline]);
@@ -353,14 +350,12 @@ namespace bpmap
             return error_t::compute_kernel_read_fail;
         }
 
-        VkShaderModuleCreateInfo raytrace_smci = {};
-        raytrace_smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        raytrace_smci.pNext = nullptr;
-        raytrace_smci.flags = 0;
-        raytrace_smci.codeSize = raytrace_kernel_data.size();
-        raytrace_smci.pCode = (uint32_t*) raytrace_kernel_data.data();
-
-        return vulkan->create_shader(raytrace, raytrace_smci);
+        return vulkan->create_shader(
+                                       raytrace,
+                                       (uint32_t*) raytrace_kernel_data.data(),
+                                       raytrace_kernel_data.size(),
+                                       shader_stage_t::compute
+                                    );
     }
 
     error_t renderer_t::create_descriptor_sets_layout()
@@ -674,7 +669,7 @@ namespace bpmap
         VkDescriptorImageInfo render_output_info;
         render_output_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         render_output_info.sampler = render_output_sampler;
-        render_output_info.imageView = render_output.view;
+        render_output_info.imageView = render_output.get_view();
 
         wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[1].pNext = nullptr;
@@ -835,7 +830,7 @@ namespace bpmap
         pssci[raytrace_pipeline].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pssci[raytrace_pipeline].pNext = nullptr;
         pssci[raytrace_pipeline].stage = VK_SHADER_STAGE_COMPUTE_BIT;
-        pssci[raytrace_pipeline].module = raytrace;
+        pssci[raytrace_pipeline].module = raytrace.get_handle();
         pssci[raytrace_pipeline].pName = "main";
         pssci[raytrace_pipeline].pSpecializationInfo = nullptr;
 

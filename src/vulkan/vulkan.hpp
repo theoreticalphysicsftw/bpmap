@@ -28,13 +28,16 @@
 #include "../window/window.hpp"
 
 #include "image.hpp"
+#include "fence.hpp"
+#include "semaphore.hpp"
+#include "buffer.hpp"
+#include "shader.hpp"
+#include "pso.hpp"
 
 namespace bpmap
 {
     class vk_buffer_t;
     class vk_command_pool_t;
-    class vk_semaphore_t;
-    class vk_fence_t;
 
     class vulkan_t
     {
@@ -104,15 +107,7 @@ namespace bpmap
 
         error_t create_image(
                               vk_image_t& image,
-                              uint32_t width,
-                              uint32_t height,
-                              vk_image_format_t format = vk_image_format_t::rgba32f,
-                              vk_image_tiling_t tiling = vk_image_tiling_t::linear,
-                              bool on_gpu = true,
-                              uint32_t usage = vk_usage_sampled | vk_usage_storage,
-                              uint32_t samples = 1,
-                              uint32_t mips = 1,
-                              uint32_t layers = 1
+                              const vk_image_desc_t& desc
                             ) const;
 
         error_t create_sampler(
@@ -175,11 +170,12 @@ namespace bpmap
 
         void destroy_framebuffers(const darray_t<VkFramebuffer>& framebuffers) const;
 
-        error_t create_shader( VkShaderModule& shader,
-                               const VkShaderModuleCreateInfo& smci
+        error_t create_shader( 
+                               vk_shader_t& shader,
+                               const uint32_t* data,
+                               size_t size,
+                               shader_stage_t type
                              ) const;
-
-        void destroy_shader(VkShaderModule shader) const;
 
         error_t create_command_pool(vk_command_pool_t& pool) const;
 
@@ -242,29 +238,5 @@ namespace bpmap
         ~vk_command_pool_t();
     };
 
-    class vk_semaphore_t
-    {
-        friend class vulkan_t;
-
-        VkDevice device;
-
-    public:
-        VkSemaphore semaphore;
-
-        vk_semaphore_t();
-        ~vk_semaphore_t();
-    };
-
-    class vk_fence_t
-    {
-        friend class vulkan_t;
-
-        VkDevice device;
-
-    public:
-        VkFence fence;
-         vk_fence_t();
-        ~vk_fence_t();
-    };
 }
 #endif // VULKAN_HPP

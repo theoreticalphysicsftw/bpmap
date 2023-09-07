@@ -29,18 +29,15 @@ namespace bpmap
         extent.width = gui->get_font_width();
         extent.depth = 1;
 
+        vk_image_desc_t desc;
+        desc.width = gui->get_font_width();
+        desc.height = gui->get_font_height(),
+        desc.format = vk_image_format_t::rgba8u,
+        desc.tiling = vk_image_tiling_t::optimal,
+        desc.on_gpu = true,
+        desc.usage = vk_usage_transfer_dst | vk_usage_sampled;
 
-        auto result = vulkan->create_image(
-                                            font_image,
-                                            gui->get_font_width(),
-                                            gui->get_font_height(),
-                                            vk_image_format_t::rgba8u,
-                                            vk_image_tiling_t::optimal,
-                                            true,
-                                            vk_usage_transfer_dst | vk_usage_sampled
-                                          );
- 
-        if(result != error_t::success)
+        if (vulkan->create_image(font_image, desc) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -119,7 +116,7 @@ namespace bpmap
         layout_barrier.pNext = nullptr;
         layout_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         layout_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        layout_barrier.image = font_image.image;
+        layout_barrier.image = font_image.get_image();
         layout_barrier.srcAccessMask = 0;
         layout_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         layout_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -156,7 +153,7 @@ namespace bpmap
         vkCmdCopyBufferToImage(
                                 tmp_cmd_buffer,
                                 staging_buffer.buffer,
-                                font_image.image,
+                                font_image.get_image(),
                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                 1,
                                 &bic
@@ -167,7 +164,7 @@ namespace bpmap
         final_layout_barrier.pNext = nullptr;
         final_layout_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         final_layout_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        final_layout_barrier.image = font_image.image;
+        final_layout_barrier.image = font_image.get_image();
         final_layout_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         final_layout_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
         final_layout_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -305,12 +302,12 @@ namespace bpmap
 
         VkDescriptorImageInfo font_texture_bind_info = {};
         font_texture_bind_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        font_texture_bind_info.imageView = font_image.view;
+        font_texture_bind_info.imageView = font_image.get_view();
         font_texture_bind_info.sampler = font_sampler;
 
         VkDescriptorImageInfo render_output_bind_info = {};
         render_output_bind_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        render_output_bind_info.imageView = renderer->get_output().view;
+        render_output_bind_info.imageView = renderer->get_output().get_view();
         render_output_bind_info.sampler = renderer->render_output_sampler;
 
         VkWriteDescriptorSet wds[2] = {};
@@ -373,14 +370,14 @@ namespace bpmap
         pssci[0].pNext = nullptr;
         pssci[0].pName = "main";
         pssci[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-        pssci[0].module = vertex_shader;
+        pssci[0].module = vertex_shader.get_handle();
         pssci[0].pSpecializationInfo = nullptr;
 
         pssci[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pssci[1].pNext = nullptr;
         pssci[1].pName = "main";
         pssci[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        pssci[1].module = fragment_shader;
+        pssci[1].module = fragment_shader.get_handle();
         pssci[1].pSpecializationInfo = nullptr;
 
         VkPipelineRasterizationStateCreateInfo prsci = {};
@@ -510,8 +507,8 @@ namespace bpmap
             return status;
         }
 
-        pssci[0].module = render_output_vertex_shader;
-        pssci[1].module = render_output_fragment_shader;
+        pssci[0].module = render_output_vertex_shader.get_handle();
+        pssci[1].module = render_output_fragment_shader.get_handle();
         gpci.subpass = 0;
 
         pvisci.vertexBindingDescriptionCount = 0;
@@ -624,48 +621,49 @@ namespace bpmap
             return error_t::fragment_shader_read_fail;
         }
 
-        VkShaderModuleCreateInfo vertex_smci = {};
-        vertex_smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        vertex_smci.pNext = nullptr;
-        vertex_smci.flags = 0;
-        vertex_smci.codeSize = vertex_shader_data.size();
-        vertex_smci.pCode = (uint32_t*) vertex_shader_data.data();
 
-        VkShaderModuleCreateInfo fragment_smci = {};
-        fragment_smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        fragment_smci.pNext = nullptr;
-        fragment_smci.flags = 0;
-        fragment_smci.codeSize = fragment_shader_data.size();
-        fragment_smci.pCode = (uint32_t*) fragment_shader_data.data();
-
-        auto status = vulkan->create_shader(vertex_shader, vertex_smci);
+        auto status = vulkan->create_shader(
+                                              vertex_shader,
+                                              (uint32_t*) vertex_shader_data.data(),
+                                              vertex_shader_data.size(),
+                                              shader_stage_t::vertex
+                                            );
 
         if(status != error_t::success)
         {
             return status;
         }
 
-        status = vulkan->create_shader(fragment_shader, fragment_smci);
+        status = vulkan->create_shader(
+                                         fragment_shader,
+                                         (uint32_t*) fragment_shader_data.data(),
+                                         fragment_shader_data.size(),
+                                         shader_stage_t::fragment
+                                      );
 
         if(status != error_t::success)
         {
             return status;
         }
 
-        vertex_smci.codeSize = render_output_vertex_shader_data.size();
-        vertex_smci.pCode = (uint32_t*) render_output_vertex_shader_data.data();
-
-        fragment_smci.codeSize = render_output_fragment_shader_data.size();
-        fragment_smci.pCode = (uint32_t*) render_output_fragment_shader_data.data();
-
-        status = vulkan->create_shader(render_output_vertex_shader, vertex_smci);
+        status = vulkan->create_shader(
+                                         render_output_vertex_shader,
+                                         (uint32_t*) render_output_vertex_shader_data.data(),
+                                         render_output_vertex_shader_data.size(),
+                                         shader_stage_t::vertex
+                                      );
 
         if(status != error_t::success)
         {
             return status;
         }
 
-        status = vulkan->create_shader(render_output_fragment_shader, fragment_smci);
+        status = vulkan->create_shader(
+                                         render_output_fragment_shader,
+                                         (uint32_t*) render_output_fragment_shader_data.data(),
+                                         render_output_fragment_shader_data.size(),
+                                         shader_stage_t::fragment
+                                      );
 
         if(status != error_t::success)
         {
@@ -939,14 +937,16 @@ namespace bpmap
 
         VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
+        auto image_available_semaphore = image_available.get_handle();
+        auto render_finished_semaphore = render_finished.get_handle();
         VkSubmitInfo submit_info = {};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.pNext = nullptr;
         submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = &image_available.semaphore;
+        submit_info.pWaitSemaphores = &image_available_semaphore;
         submit_info.pWaitDstStageMask = wait_stages;
         submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = &render_finished.semaphore;
+        submit_info.pSignalSemaphores = &render_finished_semaphore;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &command_buffers[index];
 
@@ -1129,10 +1129,6 @@ namespace bpmap
         vulkan->destroy_sampler(font_sampler);
         vulkan->destroy_image_view(font_view);
 
-        vulkan->destroy_shader(vertex_shader);
-        vulkan->destroy_shader(fragment_shader);
-        vulkan->destroy_shader(render_output_vertex_shader);
-        vulkan->destroy_shader(render_output_fragment_shader);
         vulkan->destroy_pipeline(pipeline);
         vulkan->destroy_pipeline(render_output_pipeline);
         vulkan->destroy_pipeline_layout(pipeline_layout);

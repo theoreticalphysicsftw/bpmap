@@ -44,7 +44,6 @@ namespace bpmap
         gui_renderer.bind_renderer(renderer);
 
         verify(gui_renderer.init());
-
         verify(renderer.build_command_buffers());
         verify(renderer.submit_command_buffers());
     }

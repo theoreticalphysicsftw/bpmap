@@ -45,10 +45,10 @@ namespace bpmap
         vk_semaphore_t image_available;
         vk_semaphore_t render_finished;
 
-        VkShaderModule render_output_vertex_shader;
-        VkShaderModule render_output_fragment_shader;
-        VkShaderModule vertex_shader;
-        VkShaderModule fragment_shader;
+        vk_shader_t render_output_vertex_shader;
+        vk_shader_t render_output_fragment_shader;
+        vk_shader_t vertex_shader;
+        vk_shader_t fragment_shader;
 
         vk_image_t font_image;
 

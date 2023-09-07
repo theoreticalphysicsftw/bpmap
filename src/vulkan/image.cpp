@@ -45,33 +45,26 @@ namespace bpmap
     error_t vk_image_t::create(
                                 VkDevice device,
                                 VmaAllocator allocator,
-                                uint32_t width,
-                                uint32_t height,
-                                vk_image_format_t format,
-                                vk_image_tiling_t tiling,
-                                bool on_gpu,
-                                uint32_t usage,
-                                uint32_t samples,
-                                uint32_t mips,
-                                uint32_t layers
+                                const vk_image_desc_t& desc
                               )
     {
+        info = desc;
         VkImageCreateInfo ici = {};
         ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         ici.pNext = nullptr;
         ici.flags = 0;
         ici.imageType = VK_IMAGE_TYPE_2D;
-        ici.arrayLayers = layers;
-        ici.mipLevels = mips;
-        ici.samples = VkSampleCountFlagBits(samples);
-        ici.format = to_vk_format(format);
+        ici.arrayLayers = desc.layers;
+        ici.mipLevels = desc.mips;
+        ici.samples = VkSampleCountFlagBits(desc.samples);
+        ici.format = to_vk_format(desc.format);
         ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        ici.tiling = to_vk_tiling(tiling);
+        ici.tiling = to_vk_tiling(desc.tiling);
         ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        ici.usage = usage;
+        ici.usage = desc.usage;
         ici.pQueueFamilyIndices = nullptr;
         ici.queueFamilyIndexCount = 0;
-        ici.extent = { width, height, 1 };
+        ici.extent = { desc.width, desc.height, 1 };
 
         VmaAllocationCreateInfo aci = {};
         aci.pool = VK_NULL_HANDLE;
@@ -79,7 +72,7 @@ namespace bpmap
         aci.preferredFlags = 0;
         aci.requiredFlags = 0;
         aci.pUserData = nullptr;
-        aci.usage = on_gpu? VMA_MEMORY_USAGE_GPU_ONLY : VMA_MEMORY_USAGE_CPU_TO_GPU;
+        aci.usage = desc.on_gpu? VMA_MEMORY_USAGE_GPU_ONLY : VMA_MEMORY_USAGE_CPU_TO_GPU;
         
         if(
             vmaCreateImage(
@@ -102,14 +95,14 @@ namespace bpmap
         isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         isr.baseArrayLayer = 0;
         isr.baseMipLevel = 0;
-        isr.layerCount = layers;
-        isr.levelCount = mips;
+        isr.layerCount = desc.layers;
+        isr.levelCount = desc.mips;
 
         VkImageViewCreateInfo ivci = {};
         ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         ivci.pNext = nullptr;
         ivci.flags = 0;
-        ivci.format = to_vk_format(format);
+        ivci.format = to_vk_format(desc.format);
         ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ivci.subresourceRange = isr;
         ivci.image = image;

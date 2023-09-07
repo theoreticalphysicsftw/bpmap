@@ -14,11 +14,12 @@ namespace bpmap
         const vulkan_t* vulkan;
         const scene_t* scene;
 
-        VkShaderModule raytrace;
+        vk_shader_t raytrace;
 
         vk_image_t render_output;
 
         vk_fence_t render_finished;
+        vk_fence_t tmp_fence;
 
         bool_t busy = false;
 
