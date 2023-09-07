@@ -31,6 +31,7 @@ namespace bpmap
         return format_table[(uint32_t)(format)];
     }
 
+
     VkImageTiling to_vk_tiling(vk_image_tiling_t tiling)
     {
         static const VkImageTiling tiling_table[] =
@@ -41,6 +42,7 @@ namespace bpmap
 
         return tiling_table[(uint32_t)(tiling)];
     }
+
 
     error_t vk_image_t::create(
                                 VkDevice device,
@@ -120,5 +122,21 @@ namespace bpmap
         }
                           
         return error_t::success;
+    }
+
+
+    vk_image_t::vk_image_t()
+    {
+        allocator = VK_NULL_HANDLE;
+        image = VK_NULL_HANDLE;
+    }
+
+
+    vk_image_t::~vk_image_t()
+    {
+        if(allocator != VK_NULL_HANDLE)
+        {
+            vmaDestroyImage(allocator, image, allocation);
+        }
     }
 }

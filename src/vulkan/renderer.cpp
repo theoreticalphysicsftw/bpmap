@@ -293,7 +293,6 @@ namespace bpmap
         submit_info.pWaitDstStageMask = nullptr;
         submit_info.pWaitSemaphores = nullptr;
 
-        tmp_fence;
         vulkan->create_fence(tmp_fence);
 
         if(vulkan->submit_work(submit_info, tmp_fence) != error_t::success)
@@ -436,26 +435,15 @@ namespace bpmap
                                                 scene->objects.size() *  sizeof(decltype(scene->objects)::value_type)
                                             });
         vk_buffer_t staging_buffer;
+        
+        vk_buffer_desc_t staging_buffer_desc =
+        {
+            .size = staging_buffer_size,
+            .usage = vk_buffer_usage_transfer_src,
+            .on_gpu = false
+        };
 
-        VkBufferCreateInfo staging_buffer_bci = {};
-        staging_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        staging_buffer_bci.pNext = nullptr;
-        staging_buffer_bci.flags = 0;
-        staging_buffer_bci.queueFamilyIndexCount = 0;
-        staging_buffer_bci.pQueueFamilyIndices = nullptr;
-        staging_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        staging_buffer_bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        staging_buffer_bci.size = staging_buffer_size;
-
-        VmaAllocationCreateInfo staging_buffer_aci = {};
-        staging_buffer_aci.pool = VK_NULL_HANDLE;
-        staging_buffer_aci.flags = 0;
-        staging_buffer_aci.preferredFlags = 0;
-        staging_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        staging_buffer_aci.pUserData = nullptr;
-        staging_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-        if(vulkan->create_buffer(staging_buffer, staging_buffer_bci, staging_buffer_aci) != error_t::success)
+        if(vulkan->create_buffer(staging_buffer, staging_buffer_desc) != error_t::success)
         {
             return error_t::buffer_creation_fail;
         }
@@ -502,35 +490,20 @@ namespace bpmap
             return status;
         }
 
-        VkBufferCreateInfo settings_buffer_bci = {};
-        settings_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        settings_buffer_bci.pNext = nullptr;
-        settings_buffer_bci.flags = 0;
-        settings_buffer_bci.queueFamilyIndexCount = 0;
-        settings_buffer_bci.pQueueFamilyIndices = nullptr;
-        settings_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        settings_buffer_bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        settings_buffer_bci.size = sizeof(scene_settings_t);
+        vk_buffer_desc_t scene_settings_buffer_desc =
+        {
+            .size = sizeof(scene_settings_t),
+            .usage = vk_buffer_usage_uniform_buffer,
+            .on_gpu = false
+        };
 
-        VmaAllocationCreateInfo settings_buffer_aci = {};
-        settings_buffer_aci.pool = VK_NULL_HANDLE;
-        settings_buffer_aci.flags = 0;
-        settings_buffer_aci.preferredFlags = 0;
-        settings_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        settings_buffer_aci.pUserData = nullptr;
-        settings_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-        status = vulkan->create_buffer(scene_settings, settings_buffer_bci, settings_buffer_aci);
-
-        if(status != error_t::success)
+        if(vulkan->create_buffer(scene_settings, scene_settings_buffer_desc) != error_t::success)
         {
             return status;
         }
 
         void* mapped_settings;
-
         status = scene_settings.map(&mapped_settings);
-
         if(status != error_t::success)
         {
             return status;
@@ -549,25 +522,14 @@ namespace bpmap
                                                   vk_buffer_t& staging_buffer
                                                  )
     {
-        VkBufferCreateInfo bci = {};
-        bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bci.pNext = nullptr;
-        bci.flags = 0;
-        bci.queueFamilyIndexCount = 0;
-        bci.pQueueFamilyIndices = nullptr;
-        bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        bci.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        bci.size = data.size() * sizeof(typename T::value_type);
+        vk_buffer_desc_t desc =
+        {
+            .size = data.size() * sizeof(typename T::value_type),
+            .usage = vk_buffer_usage_transfer_dst | vk_buffer_usage_storage_buffer,
+            .on_gpu = true
+        };
 
-        VmaAllocationCreateInfo aci = {};
-        aci.pool = VK_NULL_HANDLE;
-        aci.flags = 0;
-        aci.preferredFlags = 0;
-        aci.requiredFlags = 0;
-        aci.pUserData = nullptr;
-        aci.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        if(vulkan->create_buffer(buffer, bci, aci) != error_t::success)
+        if(vulkan->create_buffer(buffer, desc) != error_t::success)
         {
             return error_t::buffer_creation_fail;
         }
@@ -580,7 +542,7 @@ namespace bpmap
             return status;
         }
 
-        memcpy(mapped, data.data(), bci.size);
+        memcpy(mapped, data.data(), desc.size);
 
         staging_buffer.unmap();
 
@@ -614,9 +576,9 @@ namespace bpmap
         VkBufferCopy regions;
         regions.srcOffset = 0;
         regions.dstOffset = 0;
-        regions.size = bci.size;
+        regions.size = desc.size;
 
-        vkCmdCopyBuffer(tmp_cmd_buffer, staging_buffer.buffer, buffer.buffer, 1, &regions);
+        vkCmdCopyBuffer(tmp_cmd_buffer, staging_buffer.get_handle(), buffer.get_handle(), 1, &regions);
 
         vkEndCommandBuffer(tmp_cmd_buffer);
 
@@ -651,9 +613,9 @@ namespace bpmap
         VkWriteDescriptorSet wds[8] = {};
 
         VkDescriptorBufferInfo scene_settings_info;
-        scene_settings_info.buffer = scene_settings.buffer;
+        scene_settings_info.buffer = scene_settings.get_handle();
         scene_settings_info.offset = 0;
-        scene_settings_info.range = scene_settings.size;
+        scene_settings_info.range = scene_settings.get_size();
 
         wds[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[0].pNext = nullptr;
@@ -683,9 +645,9 @@ namespace bpmap
         wds[1].pTexelBufferView = nullptr;
 
         VkDescriptorBufferInfo triangles_info;
-        triangles_info.buffer = triangles.buffer;
+        triangles_info.buffer = triangles.get_handle();
         triangles_info.offset = 0;
-        triangles_info.range = triangles.size;
+        triangles_info.range = triangles.get_size();
 
         wds[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[2].pNext = nullptr;
@@ -699,9 +661,9 @@ namespace bpmap
         wds[2].pTexelBufferView = nullptr;
 
         VkDescriptorBufferInfo vertices_info;
-        vertices_info.buffer = vertices.buffer;
+        vertices_info.buffer = vertices.get_handle();
         vertices_info.offset = 0;
-        vertices_info.range = vertices.size;
+        vertices_info.range = vertices.get_size();
 
         wds[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[3].pNext = nullptr;
@@ -715,9 +677,9 @@ namespace bpmap
         wds[3].pTexelBufferView = nullptr;
 
         VkDescriptorBufferInfo normals_info;
-        normals_info.buffer = normals.buffer;
+        normals_info.buffer = normals.get_handle();
         normals_info.offset = 0;
-        normals_info.range = normals.size;
+        normals_info.range = normals.get_size();
 
         wds[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[4].pNext = nullptr;
@@ -731,9 +693,9 @@ namespace bpmap
         wds[4].pTexelBufferView = nullptr;
 
         VkDescriptorBufferInfo texcoords_info;
-        texcoords_info.buffer = texcoords.buffer;
+        texcoords_info.buffer = texcoords.get_handle();
         texcoords_info.offset = 0;
-        texcoords_info.range = texcoords.size;
+        texcoords_info.range = texcoords.get_size();
 
         wds[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[5].pNext = nullptr;
@@ -747,9 +709,9 @@ namespace bpmap
         wds[5].pTexelBufferView = nullptr;
 
         VkDescriptorBufferInfo materials_info;
-        materials_info.buffer = materials.buffer;
+        materials_info.buffer = materials.get_handle();
         materials_info.offset = 0;
-        materials_info.range = materials.size;
+        materials_info.range = materials.get_size();
 
         wds[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[6].pNext = nullptr;
@@ -763,9 +725,9 @@ namespace bpmap
         wds[6].pTexelBufferView = nullptr;
 
         VkDescriptorBufferInfo lights_info;
-        lights_info.buffer = lights.buffer;
+        lights_info.buffer = lights.get_handle();
         lights_info.offset = 0;
-        lights_info.range = lights.size;
+        lights_info.range = lights.get_size();
 
         wds[7].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         wds[7].pNext = nullptr;

@@ -101,8 +101,7 @@ namespace bpmap
 
         error_t create_buffer(
                                vk_buffer_t& buffer,
-                               const VkBufferCreateInfo& bci,
-                               const VmaAllocationCreateInfo& aci
+                               const vk_buffer_desc_t& desc
                              ) const;
 
         error_t create_image(
@@ -203,26 +202,6 @@ namespace bpmap
 
         ~vulkan_t();
     };
-
-
-    class vk_buffer_t
-    {
-        friend class vulkan_t;
-
-        VmaAllocation allocation;
-        VmaAllocator allocator;
-
-    public:
-        error_t map(void** data);
-        void unmap();
-
-        VkBuffer buffer;
-        size_t size;
-
-        vk_buffer_t();
-        ~vk_buffer_t();
-    };
-
 
 
     class vk_command_pool_t

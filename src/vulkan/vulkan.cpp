@@ -55,30 +55,12 @@ namespace bpmap
 
     error_t vulkan_t::create_buffer(
                                      vk_buffer_t &buffer,
-                                     const VkBufferCreateInfo &bci,
-                                     const VmaAllocationCreateInfo &aci
-                                    ) const
+                                     const vk_buffer_desc_t& desc
+                                   ) const
     {
-        if(
-            vmaCreateBuffer(
-                            allocator,
-                            &bci,
-                            &aci,
-                            &buffer.buffer,
-                            &buffer.allocation,
-                            nullptr
-                           )
-           != VK_SUCCESS
-          )
-        {
-            return error_t::buffer_creation_fail;
-        }
-
-        buffer.allocator = allocator;
-        buffer.size = bci.size;
-
-        return error_t::success;
+        return buffer.create(allocator, desc);
     }
+
 
     error_t vulkan_t::create_image(
                                     vk_image_t& image,
@@ -819,55 +801,12 @@ namespace bpmap
     }
 
 
-    error_t vk_buffer_t::map(void** data)
-    {
-        if(vmaMapMemory(allocator, allocation, data) != VK_SUCCESS)
-        {
-            return error_t::memory_mapping_fail;
-        }
-
-        return error_t::success;
-    }
-
-
-    void vk_buffer_t::unmap()
-    {
-        vmaUnmapMemory(allocator, allocation);
-    }
-
-    vk_buffer_t::vk_buffer_t()
-    {
-        allocator = VK_NULL_HANDLE;
-        buffer = VK_NULL_HANDLE;
-    }
-
-    vk_buffer_t::~vk_buffer_t()
-    {
-        if(allocator != VK_NULL_HANDLE)
-        {
-            vmaDestroyBuffer(allocator, buffer, allocation);
-        }
-    }
-
-    vk_image_t::vk_image_t()
-    {
-        allocator = VK_NULL_HANDLE;
-        image = VK_NULL_HANDLE;
-    }
-
-    vk_image_t::~vk_image_t()
-    {
-        if(allocator != VK_NULL_HANDLE)
-        {
-            vmaDestroyImage(allocator, image, allocation);
-        }
-    }
-
     vk_command_pool_t::vk_command_pool_t()
     {
         device = VK_NULL_HANDLE;
         pool = VK_NULL_HANDLE;
     }
+
 
     vk_command_pool_t::~vk_command_pool_t()
     {

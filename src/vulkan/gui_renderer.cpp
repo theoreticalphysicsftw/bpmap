@@ -44,25 +44,14 @@ namespace bpmap
 
         vk_buffer_t staging_buffer;
 
-        VkBufferCreateInfo staging_buffer_bci = {};
-        staging_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        staging_buffer_bci.pNext = nullptr;
-        staging_buffer_bci.flags = 0;
-        staging_buffer_bci.queueFamilyIndexCount = 0;
-        staging_buffer_bci.pQueueFamilyIndices = nullptr;
-        staging_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        staging_buffer_bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        staging_buffer_bci.size = gui->get_font_width() * gui->get_font_height() * 4;
+        vk_buffer_desc_t staging_buffer_desc =
+        {
+            .size = size_t(gui->get_font_width() * gui->get_font_height() * 4),
+            .usage = vk_buffer_usage_transfer_src,
+            .on_gpu = false
+        };
 
-        VmaAllocationCreateInfo staging_buffer_aci = {};
-        staging_buffer_aci.pool = VK_NULL_HANDLE;
-        staging_buffer_aci.flags = 0;
-        staging_buffer_aci.preferredFlags = 0;
-        staging_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        staging_buffer_aci.pUserData = nullptr;
-        staging_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-        if(vulkan->create_buffer(staging_buffer, staging_buffer_bci, staging_buffer_aci) != error_t::success)
+        if(vulkan->create_buffer(staging_buffer, staging_buffer_desc) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -75,7 +64,7 @@ namespace bpmap
             return status;
         }
 
-        memcpy(mapped, gui->get_raw_font(), staging_buffer_bci.size);
+        memcpy(mapped, gui->get_raw_font(), staging_buffer_desc.size);
 
         staging_buffer.unmap();
 
@@ -152,7 +141,7 @@ namespace bpmap
 
         vkCmdCopyBufferToImage(
                                 tmp_cmd_buffer,
-                                staging_buffer.buffer,
+                                staging_buffer.get_handle(),
                                 font_image.get_image(),
                                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                 1,
@@ -296,7 +285,7 @@ namespace bpmap
     error_t gui_renderer_t::update_descriptor_sets()
     {
         VkDescriptorBufferInfo gui_data_bind_info = {};
-        gui_data_bind_info.buffer = gui_data_buffer.buffer;
+        gui_data_bind_info.buffer = gui_data_buffer.get_handle();
         gui_data_bind_info.offset = 0;
         gui_data_bind_info.range = sizeof(gui_data);
 
@@ -706,75 +695,40 @@ namespace bpmap
 
     error_t gui_renderer_t::allocate_buffers()
     {
-        VkBufferCreateInfo index_buffer_bci = {};
-        index_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        index_buffer_bci.pNext = nullptr;
-        index_buffer_bci.flags = 0;
-        index_buffer_bci.queueFamilyIndexCount = 0;
-        index_buffer_bci.pQueueFamilyIndices = nullptr;
-        index_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        index_buffer_bci.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        index_buffer_bci.size = max_gui_ibuffer_size;
 
-        VmaAllocationCreateInfo index_buffer_aci = {};
-        index_buffer_aci.pool = VK_NULL_HANDLE;
-        index_buffer_aci.flags = 0;
-        index_buffer_aci.preferredFlags = 0;
-        index_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        index_buffer_aci.pUserData = nullptr;
-        index_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+        vk_buffer_desc_t index_buffer_desc =
+        {
+            .size = max_gui_ibuffer_size,
+            .usage = vk_buffer_usage_index_buffer,
+            .on_gpu = false
+        };
 
-        auto status = vulkan->create_buffer(index_buffer, index_buffer_bci, index_buffer_aci);
-
+        auto status = vulkan->create_buffer(index_buffer, index_buffer_desc);
         if(status != error_t::success)
         {
             return status;
         }
 
-        VkBufferCreateInfo vertex_buffer_bci = {};
-        vertex_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        vertex_buffer_bci.pNext = nullptr;
-        vertex_buffer_bci.flags = 0;
-        vertex_buffer_bci.queueFamilyIndexCount = 0;
-        vertex_buffer_bci.pQueueFamilyIndices = nullptr;
-        vertex_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vertex_buffer_bci.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        vertex_buffer_bci.size = max_gui_vbuffer_size;
+        vk_buffer_desc_t vertex_buffer_desc =
+        {
+            .size = max_gui_vbuffer_size,
+            .usage = vk_buffer_usage_index_buffer,
+            .on_gpu = false
+        };
 
-        VmaAllocationCreateInfo vertex_buffer_aci = {};
-        vertex_buffer_aci.pool = VK_NULL_HANDLE;
-        vertex_buffer_aci.flags = 0;
-        vertex_buffer_aci.preferredFlags = 0;
-        vertex_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        vertex_buffer_aci.pUserData = nullptr;
-        vertex_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-        status = vulkan->create_buffer(vertex_buffer, vertex_buffer_bci, vertex_buffer_aci);
-
+        status = vulkan->create_buffer(vertex_buffer, vertex_buffer_desc);
         if(status != error_t::success)
         {
             return status;
         }
 
-        VkBufferCreateInfo gui_data_buffer_bci = {};
-        gui_data_buffer_bci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        gui_data_buffer_bci.pNext = nullptr;
-        gui_data_buffer_bci.flags = 0;
-        gui_data_buffer_bci.queueFamilyIndexCount = 0;
-        gui_data_buffer_bci.pQueueFamilyIndices = nullptr;
-        gui_data_buffer_bci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        gui_data_buffer_bci.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        gui_data_buffer_bci.size = sizeof(gui_data);
-
-        VmaAllocationCreateInfo gui_data_buffer_aci = {};
-        gui_data_buffer_aci.pool = VK_NULL_HANDLE;
-        gui_data_buffer_aci.flags = 0;
-        gui_data_buffer_aci.preferredFlags = 0;
-        gui_data_buffer_aci.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        gui_data_buffer_aci.pUserData = nullptr;
-        gui_data_buffer_aci.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-        status = vulkan->create_buffer(gui_data_buffer, gui_data_buffer_bci, gui_data_buffer_aci);
+        vk_buffer_desc_t gui_data_buffer_desc =
+        {
+            .size = sizeof(gui_data),
+            .usage = vk_buffer_usage_uniform_buffer,
+            .on_gpu = false
+        };
+        status = vulkan->create_buffer(gui_data_buffer, gui_data_buffer_desc);
 
         if(status != error_t::success)
         {
@@ -900,8 +854,9 @@ namespace bpmap
                                 );
 
         VkDeviceSize off = 0;
-        vkCmdBindVertexBuffers(command_buffers[index], 0, 1, &vertex_buffer.buffer, &off);
-        vkCmdBindIndexBuffer(command_buffers[index], index_buffer.buffer, off, VK_INDEX_TYPE_UINT16);
+        VkBuffer vertex_buffer_handle = vertex_buffer.get_handle();
+        vkCmdBindVertexBuffers(command_buffers[index], 0, 1, &vertex_buffer_handle, &off);
+        vkCmdBindIndexBuffer(command_buffers[index], index_buffer.get_handle(), off, VK_INDEX_TYPE_UINT16);
 
         auto cmds = gui->emit_draw_calls();
 

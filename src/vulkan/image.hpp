@@ -38,10 +38,10 @@ namespace bpmap
         linear,
     };
 
-    static constexpr const uint32_t vk_usage_color = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    static constexpr const uint32_t vk_usage_sampled = VK_IMAGE_USAGE_SAMPLED_BIT;
-    static constexpr const uint32_t vk_usage_storage = VK_IMAGE_USAGE_STORAGE_BIT;
-    static constexpr const uint32_t vk_usage_transfer_dst = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    static constexpr uint32_t vk_usage_color = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    static constexpr uint32_t vk_usage_sampled = VK_IMAGE_USAGE_SAMPLED_BIT;
+    static constexpr uint32_t vk_usage_storage = VK_IMAGE_USAGE_STORAGE_BIT;
+    static constexpr uint32_t vk_usage_transfer_dst = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 
     struct vk_image_desc_t
