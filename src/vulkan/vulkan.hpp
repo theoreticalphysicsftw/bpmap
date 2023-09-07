@@ -173,7 +173,7 @@ namespace bpmap
                                vk_shader_t& shader,
                                const uint32_t* data,
                                size_t size,
-                               shader_stage_t type
+                               vk_shader_stage_t type
                              ) const;
 
         error_t create_command_pool(vk_command_pool_t& pool) const;

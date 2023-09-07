@@ -7,15 +7,14 @@
 
 namespace bpmap
 {
-
-    void renderer_t::bind_vulkan(const vulkan_t& vk)
+    renderer_t::renderer_t(
+                            const vulkan_t& vulkan,
+                            const scene_t& scene,
+                            shader_registry_t& registry
+                          ) :
+        vulkan(&vulkan), scene(&scene), shader_registry(&registry)
     {
-        vulkan = &vk;
-    }
 
-    void renderer_t::bind_scene(const scene_t& s)
-    {
-        scene = &s;
     }
 
     error_t renderer_t::init()
@@ -342,19 +341,10 @@ namespace bpmap
 
     error_t renderer_t::create_shaders()
     {
-        std::vector<uint8_t> raytrace_kernel_data;
-
-        if(!read_whole_file(raytrace_kernel_path, raytrace_kernel_data))
-        {
-            return error_t::compute_kernel_read_fail;
-        }
-
-        return vulkan->create_shader(
-                                       raytrace,
-                                       (uint32_t*) raytrace_kernel_data.data(),
-                                       raytrace_kernel_data.size(),
-                                       shader_stage_t::compute
-                                    );
+        return shader_registry->add_from_file(
+                                               raytrace_cs_name,
+                                               vk_shader_stage_t::compute
+                                             );
     }
 
     error_t renderer_t::create_descriptor_sets_layout()
@@ -792,7 +782,7 @@ namespace bpmap
         pssci[raytrace_pipeline].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pssci[raytrace_pipeline].pNext = nullptr;
         pssci[raytrace_pipeline].stage = VK_SHADER_STAGE_COMPUTE_BIT;
-        pssci[raytrace_pipeline].module = raytrace.get_handle();
+        pssci[raytrace_pipeline].module = shader_registry->get(raytrace_cs_name).get_handle();
         pssci[raytrace_pipeline].pName = "main";
         pssci[raytrace_pipeline].pSpecializationInfo = nullptr;
 

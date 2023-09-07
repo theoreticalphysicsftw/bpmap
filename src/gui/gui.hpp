@@ -54,7 +54,7 @@ namespace bpmap
 
     class gui_t
     {
-        window_t * window;
+        window_t* window;
 
         nk_context context;
         nk_font_atlas font_atlas;
@@ -75,8 +75,7 @@ namespace bpmap
         bool_t data_changed = false;
 
     public:
-        gui_t();
-        void bind_window(window_t& window);
+        gui_t(window_t& window);
 
         int32_t get_font_height() const {return font_height;}
         int32_t get_font_width() const {return font_width;}

@@ -64,6 +64,7 @@ namespace bpmap
         gui_t* gui;
         const vulkan_t* vulkan;
         const renderer_t* renderer;
+        shader_registry_t* shader_registry;
 
         error_t setup_font_texture();
         error_t create_descriptor_sets_layout();
@@ -87,17 +88,20 @@ namespace bpmap
         error_t present_on_screen(uint64_t index);
 
     public:
-        static constexpr const char_t* vertex_shader_path = "gui.vert.spv";
-        static constexpr const char_t* fragment_shader_path = "gui.frag.spv";
-        static constexpr const char_t* render_output_vertex_shader_path = "render_output.vert.spv";
-        static constexpr const char_t* render_output_fragment_shader_path = "render_output.frag.spv";
+        static constexpr const char_t* gui_vs_name = "gui.vert.spv";
+        static constexpr const char_t* gui_fs_name = "gui.frag.spv";
+        static constexpr const char_t* render_output_vs_name = "render_output.vert.spv";
+        static constexpr const char_t* render_output_fs_name = "render_output.frag.spv";
 
         static constexpr uint32_t max_gui_ibuffer_size = 1 << 16;
         static constexpr uint32_t max_gui_vbuffer_size = 1 << 20;
 
-        void bind_gui(gui_t& gui);
-        void bind_vulkan(const vulkan_t& vulkan);
-        void bind_renderer(const renderer_t& renderer);
+        gui_renderer_t(
+                        gui_t& gui, 
+                        const vulkan_t& vk,
+                        shader_registry_t& shader_registry,
+                        const renderer_t& r
+                      );
 
         error_t init();
 

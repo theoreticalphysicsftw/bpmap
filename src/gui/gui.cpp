@@ -1,4 +1,4 @@
-// Copyright 2018 Mihail Mladenov
+// Copyright 2018-2023 Mihail Mladenov
 //
 // This file is part of bpmap.
 //
@@ -29,7 +29,8 @@
 
 namespace bpmap
 {
-    gui_t::gui_t()
+    gui_t::gui_t(window_t& window) :
+        window(&window)
     {
         nk_buffer_init_default(&commands);
 
@@ -116,10 +117,6 @@ namespace bpmap
         nk_input_end(&context);
     }
 
-    void gui_t::bind_window(window_t& win)
-    {
-        window = &win;
-    }
 
     void gui_t::emit_buffers(void* ibuffer, uint32_t ibuffer_size, void* vbuffer, uint32_t vbuffer_size)
     {

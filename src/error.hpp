@@ -42,6 +42,7 @@ namespace bpmap
         descriptor_pool_creation_fail,
         descriptor_set_allocation_fail,
         shader_creation_fail,
+        shader_read_fail,
         vertex_shader_read_fail,
         fragment_shader_read_fail,
         font_texture_setup_fail,
@@ -58,6 +59,21 @@ namespace bpmap
 
     string_t get_error_message(error_t e);
     void verify(error_t);
+
+#ifdef BPMAP_DEBUG
+    #define DEBUG_VERIFY(cond) \
+    do \
+    { \
+        if (!(cond)) \
+        { \
+            log_error("Verify failed on ",__FILE__, " : ", __LINE__); \
+            std::abort(); \
+        } \
+    } \
+    while(0)
+#else
+    #define DEBUG_VERIFY(cond)
+#endif
 }
 
 #endif // ERROR_HPP

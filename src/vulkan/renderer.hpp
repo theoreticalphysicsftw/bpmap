@@ -5,6 +5,7 @@
 #include <scene/scene.hpp>
 
 #include "vulkan.hpp"
+#include "shader_registry.hpp"
 
 namespace bpmap
 {
@@ -13,8 +14,7 @@ namespace bpmap
     {
         const vulkan_t* vulkan;
         const scene_t* scene;
-
-        vk_shader_t raytrace;
+        shader_registry_t* shader_registry;
 
         vk_image_t render_output;
 
@@ -69,10 +69,13 @@ namespace bpmap
 
 
     public:
-        static constexpr const char* raytrace_kernel_path = "raytrace.comp.spv";
+        static constexpr const char* raytrace_cs_name = "raytrace.comp.spv";
 
-        void bind_vulkan(const vulkan_t&);
-        void bind_scene(const scene_t&);
+        renderer_t(
+                    const vulkan_t& vulkan,
+                    const scene_t& scene,
+                    shader_registry_t& registry
+                  );
 
         error_t init();
 

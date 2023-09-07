@@ -21,6 +21,13 @@
 
 namespace bpmap
 {
+    vk_shader_t::vk_shader_t() :
+        type(vk_shader_stage_t::invalid),
+        device(VK_NULL_HANDLE),
+        shader(VK_NULL_HANDLE)
+    {
+    }
+
     vk_shader_t::~vk_shader_t()
     {
         if (shader != VK_NULL_HANDLE)
@@ -34,7 +41,7 @@ namespace bpmap
                                   VkDevice dev,
                                   const uint32_t* data,
                                   size_t size,
-                                  shader_stage_t type
+                                  vk_shader_stage_t type
                                 )
     {
         VkShaderModuleCreateInfo smci = {};

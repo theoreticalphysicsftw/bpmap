@@ -27,6 +27,7 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <deque>
 #include <unordered_map>
 #include <unordered_set>
 #include <array>
@@ -55,6 +56,9 @@ namespace bpmap
 
     template <typename T, size_t N>
     using array_t = std::array<T,N>;
+
+    template <typename T>
+    using deque_t = std::deque<T>;
 
     template <class... U>
     using variant_t = std::variant<U...>;

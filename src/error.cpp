@@ -101,6 +101,9 @@ namespace bpmap
             case error_t::shader_creation_fail:
                 return "Failed to create shader!";
 
+            case error_t::shader_read_fail:
+                return "Failed to read shader!";
+
             case error_t::vertex_shader_read_fail:
                 return "Failed to read vertex shader!";
 

@@ -19,9 +19,21 @@
 #include <limits>
 
 #include "gui_renderer.hpp"
+#include "shader_registry.hpp"
 
 namespace bpmap
 {
+    gui_renderer_t::gui_renderer_t(
+                                    gui_t& gui,
+                                    const vulkan_t& vk,
+                                    shader_registry_t& sr,
+                                    const renderer_t& r
+                                  ) :
+        gui(&gui), vulkan(&vk), shader_registry(&sr), renderer(&r)
+    {
+
+    }
+
     error_t gui_renderer_t::setup_font_texture()
     {
         VkExtent3D extent = {};
@@ -359,14 +371,14 @@ namespace bpmap
         pssci[0].pNext = nullptr;
         pssci[0].pName = "main";
         pssci[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-        pssci[0].module = vertex_shader.get_handle();
+        pssci[0].module = shader_registry->get(gui_vs_name).get_handle();
         pssci[0].pSpecializationInfo = nullptr;
 
         pssci[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         pssci[1].pNext = nullptr;
         pssci[1].pName = "main";
         pssci[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        pssci[1].module = fragment_shader.get_handle();
+        pssci[1].module = shader_registry->get(gui_fs_name).get_handle();
         pssci[1].pSpecializationInfo = nullptr;
 
         VkPipelineRasterizationStateCreateInfo prsci = {};
@@ -496,8 +508,8 @@ namespace bpmap
             return status;
         }
 
-        pssci[0].module = render_output_vertex_shader.get_handle();
-        pssci[1].module = render_output_fragment_shader.get_handle();
+        pssci[0].module = shader_registry->get(render_output_vs_name).get_handle();
+        pssci[1].module = shader_registry->get(render_output_fs_name).get_handle();
         gpci.subpass = 0;
 
         pvisci.vertexBindingDescriptionCount = 0;
@@ -585,82 +597,17 @@ namespace bpmap
 
     error_t gui_renderer_t::create_shaders()
     {
-        std::vector<uint8_t> vertex_shader_data;
-        std::vector<uint8_t> fragment_shader_data;
-        std::vector<uint8_t> render_output_vertex_shader_data;
-        std::vector<uint8_t> render_output_fragment_shader_data;
-
-        if(!read_whole_file(vertex_shader_path, vertex_shader_data))
+        darray_t<pair_t<string_t, vk_shader_stage_t>> shaders
         {
-            return error_t::vertex_shader_read_fail;
-        }
+            {gui_vs_name, vk_shader_stage_t::vertex},
+            {gui_fs_name, vk_shader_stage_t::fragment},
+            {render_output_vs_name, vk_shader_stage_t::vertex},
+            {render_output_fs_name, vk_shader_stage_t::fragment},
+        };
 
-        if(!read_whole_file(fragment_shader_path, fragment_shader_data))
-        {
-            return error_t::fragment_shader_read_fail;
-        }
-
-        if(!read_whole_file(render_output_vertex_shader_path, render_output_vertex_shader_data))
-        {
-            return error_t::vertex_shader_read_fail;
-        }
-
-        if(!read_whole_file(render_output_fragment_shader_path, render_output_fragment_shader_data))
-        {
-            return error_t::fragment_shader_read_fail;
-        }
-
-
-        auto status = vulkan->create_shader(
-                                              vertex_shader,
-                                              (uint32_t*) vertex_shader_data.data(),
-                                              vertex_shader_data.size(),
-                                              shader_stage_t::vertex
-                                            );
-
-        if(status != error_t::success)
-        {
-            return status;
-        }
-
-        status = vulkan->create_shader(
-                                         fragment_shader,
-                                         (uint32_t*) fragment_shader_data.data(),
-                                         fragment_shader_data.size(),
-                                         shader_stage_t::fragment
-                                      );
-
-        if(status != error_t::success)
-        {
-            return status;
-        }
-
-        status = vulkan->create_shader(
-                                         render_output_vertex_shader,
-                                         (uint32_t*) render_output_vertex_shader_data.data(),
-                                         render_output_vertex_shader_data.size(),
-                                         shader_stage_t::vertex
-                                      );
-
-        if(status != error_t::success)
-        {
-            return status;
-        }
-
-        status = vulkan->create_shader(
-                                         render_output_fragment_shader,
-                                         (uint32_t*) render_output_fragment_shader_data.data(),
-                                         render_output_fragment_shader_data.size(),
-                                         shader_stage_t::fragment
-                                      );
-
-        if(status != error_t::success)
-        {
-            return status;
-        }
-
-        return error_t::success;
+        return shader_registry->add_from_file(shaders);
     }
+
 
     error_t gui_renderer_t::create_command_pool()
     {
@@ -915,23 +862,6 @@ namespace bpmap
     error_t gui_renderer_t::present_on_screen(uint64_t index)
     {
         return vulkan->present_on_screen(index, render_finished);
-    }
-
-
-    void gui_renderer_t::bind_gui(gui_t &g)
-    {
-        gui = &g;
-    }
-
-
-    void gui_renderer_t::bind_vulkan(const vulkan_t &vk)
-    {
-        vulkan = &vk;
-    }
-
-    void gui_renderer_t::bind_renderer(const renderer_t& r)
-    {
-        renderer = &r;
     }
 
 

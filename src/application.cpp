@@ -24,24 +24,23 @@
 namespace bpmap
 {
 
-    application_t::application_t(uint32_t res_x, uint32_t res_y, const string_t& app_name)
+    application_t::application_t(
+                                  uint32_t res_x,
+                                  uint32_t res_y,
+                                  const string_t& app_name
+                                ) :
+        gui(window),
+        renderer(vulkan, scene, shader_registry),
+        gui_renderer(gui, vulkan, shader_registry, renderer),
+        shader_registry(vulkan)
     {
         verify(window.init({res_x, res_y, app_name}));
 
         // TODO: remove hardcoded scene and add an option to select from UI.
         verify(load_scene("scene.bpmap", scene));
         verify(vulkan.init(window));
-        gui.bind_window(window);
-
-        renderer.bind_vulkan(vulkan);
-        renderer.bind_scene(scene);
 
         verify(renderer.init());
-
-
-        gui_renderer.bind_gui(gui);
-        gui_renderer.bind_vulkan(vulkan);
-        gui_renderer.bind_renderer(renderer);
 
         verify(gui_renderer.init());
         verify(renderer.build_command_buffers());
