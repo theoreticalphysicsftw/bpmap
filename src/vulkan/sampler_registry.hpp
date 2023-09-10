@@ -16,20 +16,28 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef VULKAN_HPP
-#define VULKAN_HPP
+#ifndef SAMPLER_REGISTRY_HPP
+#define SAMPLER_REGISTRY_HPP
 
-#include "device.hpp"
-#include "sampler.hpp"
-#include "image.hpp"
-#include "buffer.hpp"
-#include "pso.hpp"
-#include "shader.hpp"
-#include "semaphore.hpp"
-#include "fence.hpp"
+#include "vulkan.hpp"
 
+namespace bpmap
+{
+    class sampler_registry_t
+    {
+        // We don't want registering new samplers to invalidate
+        // others by calling destructors.
+        deque_t<vk_sampler_t> samplers; 
+        hash_table_t<vk_sampler_desc_t, uint32_t, vk_sampler_desc_hash_t> desc_to_id;
 
-#include "sampler_registry.hpp"
-#include "shader_registry.hpp"
+        const vk_device_t* dev;
+
+        public:
+        sampler_registry_t(const vk_device_t& device) : dev(&device) {}
+
+        error_t add(const vk_sampler_desc_t& desc);
+        vk_sampler_t& get(const vk_sampler_desc_t& desc);
+    };
+}
 
 #endif

@@ -15,14 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef IMAGE_HPP
-#define IMAGE_HPP
+#ifndef VULKAN_IMAGE_HPP
+#define VULKAN_IMAGE_HPP
 
-#include <common.hpp>
-#include <error.hpp>
-
-#include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
 
 namespace bpmap
 {
@@ -46,8 +41,8 @@ namespace bpmap
 
     struct vk_image_desc_t
     {
-        uint32_t width;
-        uint32_t height;
+        uint32_t width = 0;
+        uint32_t height = 0;
         vk_image_format_t format = vk_image_format_t::rgba32f;
         vk_image_tiling_t tiling = vk_image_tiling_t::optimal;
         bool on_gpu = true;
@@ -59,17 +54,20 @@ namespace bpmap
 
     class vk_image_t
     {
+        const vk_device_t* dev;
+        bool_t wrapped;
         VmaAllocation allocation;
-        VmaAllocator allocator;
         VkImage image;
         VkImageView view;
         
         vk_image_desc_t info;
 
+        vk_image_t(const vk_image_t&) = delete;
+        vk_image_t& operator=(const vk_image_t&) = delete;
+
     public:
         error_t create(
-                        VkDevice device,
-                        VmaAllocator allocator,
+                        const vk_device_t& device,
                         const vk_image_desc_t& desc
                       );
 

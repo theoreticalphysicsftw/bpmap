@@ -16,32 +16,58 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#include "vulkan.hpp"
 #include "fence.hpp"
+
 
 namespace bpmap
 {
+    vk_fence_t::vk_fence_t()
+    {
+        dev = nullptr;
+        fence = VK_NULL_HANDLE;
+    }
+
+
     vk_fence_t::~vk_fence_t()
     {
-        if(device != VK_NULL_HANDLE)
+        if(dev)
         {
-            vkDestroyFence(device, fence, nullptr);
+            vkDestroyFence(dev->get_device(), fence, nullptr);
         }
     }
 
-    error_t vk_fence_t::create(VkDevice device)
+    error_t vk_fence_t::create(const vk_device_t& device)
     {
         VkFenceCreateInfo fci;
         fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fci.pNext = nullptr;
         fci.flags = 0;
 
-        if(vkCreateFence(device, &fci, nullptr, &fence) != VK_SUCCESS)
+        if(vkCreateFence(device.get_device(), &fci, nullptr, &fence) != VK_SUCCESS)
         {
             return error_t::fence_creation_fail;
         }
 
-        this->device = device;
+        dev = &device;
 
         return error_t::success;
+    }
+
+    error_t vk_fence_t::wait(uint64_t timeout)
+    {
+        auto status = vkWaitForFences(dev->get_device(), 1, &fence, VK_TRUE, timeout);
+
+        if(status == VK_SUCCESS)
+        {
+            return error_t::success;
+        }
+
+        if(status == VK_TIMEOUT)
+        {
+            return error_t::timeout;
+        }
+
+        return error_t::device_lost;
     }
 }

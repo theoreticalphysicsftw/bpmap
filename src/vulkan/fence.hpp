@@ -16,26 +16,27 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef FENCE_HPP
-#define FENCE_HPP
+#ifndef VULKAN_FENCE_HPP
+#define VULKAN_FENCE_HPP
 
-#include <common.hpp>
-#include <error.hpp>
-
-#include <vulkan/vulkan.h>
 
 namespace bpmap
 {
     class vk_fence_t
     {
-        VkDevice device = VK_NULL_HANDLE;
+        const vk_device_t* dev;
         VkFence fence = VK_NULL_HANDLE;
+
+        vk_fence_t(const vk_fence_t&) = delete;
+        vk_fence_t& operator=(const vk_fence_t&) = delete;
 
     public:
         VkFence get_handle() const { return fence; }
-        error_t create(VkDevice device);
+        error_t create(const vk_device_t& device);
+        error_t wait(uint64_t timeout = 0);
+        vk_fence_t();
         ~vk_fence_t();
     };
 }
 
-#endif // FENCE_HPP
+#endif

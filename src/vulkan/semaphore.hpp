@@ -16,24 +16,24 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef SEMAPHORE_HPP
-#define SEMAPHORE_HPP
-
-#include <common.hpp>
-#include <error.hpp>
-
-#include <vulkan/vulkan.h>
+#ifndef VULKAN_SEMAPHORE_HPP
+#define VULKAN_SEMAPHORE_HPP
 
 namespace bpmap
 {
     class vk_semaphore_t
     {
-        VkDevice device = VK_NULL_HANDLE;
-        VkSemaphore semaphore = VK_NULL_HANDLE;
+        const vk_device_t* dev;
+        VkSemaphore semaphore;
+
+        vk_semaphore_t(const vk_semaphore_t&) = delete;
+        vk_semaphore_t& operator=(const vk_semaphore_t) = delete;
 
     public:
         VkSemaphore get_handle() const { return semaphore; }
-        error_t create(VkDevice device);
+        error_t create(const vk_device_t& device);
+
+        vk_semaphore_t();
         ~vk_semaphore_t();
     };
 }

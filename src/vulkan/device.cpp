@@ -16,17 +16,17 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#include <algorithm>
 #include <limits>
 
 #define VMA_IMPLEMENTATION
+
+#include "device.hpp"
 #include "vulkan.hpp"
 
-#include "io.hpp"
 
 namespace bpmap
 {
-    error_t vulkan_t::init(window_t& win)
+    error_t vk_device_t::init(window_t& win)
     {
         window = &win;
 
@@ -53,30 +53,8 @@ namespace bpmap
        return error;
     }
 
-    error_t vulkan_t::create_buffer(
-                                     vk_buffer_t &buffer,
-                                     const vk_buffer_desc_t& desc
-                                   ) const
-    {
-        return buffer.create(allocator, desc);
-    }
 
-
-    error_t vulkan_t::create_image(
-                                    vk_image_t& image,
-                                    const vk_image_desc_t& desc
-                                  ) const
-    {
-        return image.create(device, allocator, desc);
-    }
-
-
-    void vulkan_t::destroy_image_view(VkImageView image_view) const
-    {
-        vkDestroyImageView(device, image_view, nullptr);
-    }
-
-    error_t vulkan_t::create_pipeline_layout(
+    error_t vk_device_t::create_pipeline_layout(
                                               VkPipelineLayout& layout,
                                               const VkPipelineLayoutCreateInfo& plci
                                             ) const
@@ -89,12 +67,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::destroy_pipeline_layout(VkPipelineLayout layout) const
+    void vk_device_t::destroy_pipeline_layout(VkPipelineLayout layout) const
     {
         vkDestroyPipelineLayout(device, layout, nullptr);
     }
 
-    error_t vulkan_t::create_descriptor_set_layout(
+    error_t vk_device_t::create_descriptor_set_layout(
                                                     VkDescriptorSetLayout &layout,
                                                     const VkDescriptorSetLayoutCreateInfo &dslci
                                                   ) const
@@ -107,12 +85,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const
+    void vk_device_t::destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const
     {
         vkDestroyDescriptorSetLayout(device, layout, nullptr);
     }
 
-    error_t vulkan_t::create_descriptor_pool(
+    error_t vk_device_t::create_descriptor_pool(
                                               VkDescriptorPool &pool,
                                               const VkDescriptorPoolCreateInfo &dpci
                                             ) const
@@ -125,12 +103,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::destroy_descriptor_pool(VkDescriptorPool pool) const
+    void vk_device_t::destroy_descriptor_pool(VkDescriptorPool pool) const
     {
         vkDestroyDescriptorPool(device, pool, nullptr);
     }
 
-    error_t vulkan_t::allocate_descriptor_set(
+    error_t vk_device_t::allocate_descriptor_set(
                                                VkDescriptorSet& set,
                                                const VkDescriptorSetAllocateInfo &dsai
                                              ) const
@@ -144,22 +122,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::create_sampler(VkSampler &sampler, const VkSamplerCreateInfo &sci) const
-    {
-        if(vkCreateSampler(device, &sci, nullptr, &sampler) != VK_SUCCESS)
-        {
-            return error_t::sampler_creation_fail;
-        }
-
-        return error_t::success;
-    }
-
-    void vulkan_t::destroy_sampler(VkSampler sampler) const
-    {
-        vkDestroySampler(device, sampler, nullptr);
-    }
-
-    error_t vulkan_t::create_graphics_pipeline(
+    error_t vk_device_t::create_graphics_pipeline(
                                                 VkPipeline& pipeline,
                                                 const VkGraphicsPipelineCreateInfo& gpci
                                               ) const
@@ -182,7 +145,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::create_compute_pipelines(
+    error_t vk_device_t::create_compute_pipelines(
                                                darray_t<VkPipeline>& pipelines,
                                                const darray_t<VkComputePipelineCreateInfo>& cpci
                                              ) const
@@ -205,12 +168,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::destroy_pipeline(VkPipeline pipeline) const
+    void vk_device_t::destroy_pipeline(VkPipeline pipeline) const
     {
         vkDestroyPipeline(device, pipeline, nullptr);
     }
 
-    error_t vulkan_t::create_renederpass(
+    error_t vk_device_t::create_renederpass(
                                           VkRenderPass &render_pass,
                                           const VkRenderPassCreateInfo &rpci
                                         ) const
@@ -223,12 +186,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::destroy_render_pass(VkRenderPass render_pass) const
+    void vk_device_t::destroy_render_pass(VkRenderPass render_pass) const
     {
         vkDestroyRenderPass(device, render_pass, nullptr);
     }
 
-    error_t vulkan_t::create_framebuffers(
+    error_t vk_device_t::create_framebuffers(
                                            darray_t<VkFramebuffer>& framebuffers,
                                            VkFramebufferCreateInfo &fbci
                                          ) const
@@ -253,7 +216,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::destroy_framebuffers(const darray_t<VkFramebuffer> &framebuffers) const
+    void vk_device_t::destroy_framebuffers(const darray_t<VkFramebuffer> &framebuffers) const
     {
         for(auto framebuffer: framebuffers)
         {
@@ -262,18 +225,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::create_shader(
-                                     vk_shader_t& shader,
-                                     const uint32_t* data,
-                                     size_t size,
-                                     vk_shader_stage_t type
-                                   ) const
-    {
-        return shader.create(device, data, size, type);
-    }
-
-
-    error_t vulkan_t::create_instance(const string_t& name)
+    error_t vk_device_t::create_instance(const string_t& name)
     {
         VkApplicationInfo appinfo = {};
         appinfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -315,7 +267,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::find_gpu(VkPhysicalDevice& gpu)
+    error_t vk_device_t::find_gpu(VkPhysicalDevice& gpu)
     {
         std::vector<VkPhysicalDevice> physical_devices;
         std::vector<std::pair<VkPhysicalDevice, uint32_t>> gpus;
@@ -365,7 +317,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::create_logical_device()
+    error_t vk_device_t::create_logical_device()
     {
         if(find_gpu(gpu_device) != error_t::success)
         {
@@ -398,6 +350,10 @@ namespace bpmap
 
         std::vector<const char*> extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
+        VkPhysicalDeviceFeatures features;
+        memset(&features, 0, sizeof(features));
+        features.samplerAnisotropy = VK_TRUE;
+
         VkDeviceCreateInfo dci = {};
         dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         dci.flags = 0;
@@ -408,7 +364,7 @@ namespace bpmap
         dci.ppEnabledExtensionNames = extensions.data();
         dci.queueCreateInfoCount = 1;
         dci.pQueueCreateInfos = &dqci;
-        dci.pEnabledFeatures = nullptr;
+        dci.pEnabledFeatures = &features;
 
         if (vkCreateDevice(gpu_device, &dci, nullptr, &device) == VK_SUCCESS)
         {
@@ -421,7 +377,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::get_queues()
+    error_t vk_device_t::get_queues()
     {
         vkGetDeviceQueue(
                           device,
@@ -439,7 +395,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::create_command_pool(vk_command_pool_t& command_pool) const
+    error_t vk_device_t::create_command_pool(vk_command_pool_t& command_pool) const
     {
         VkCommandPoolCreateInfo cpci = {};
         cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -468,7 +424,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::create_command_buffers(
+    error_t vk_device_t::create_command_buffers(
                                               VkCommandBuffer* buffers,
                                               const VkCommandBufferAllocateInfo &cbai
                                             ) const
@@ -481,37 +437,10 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::create_semaphore(vk_semaphore_t& semaphore) const
+
+    error_t vk_device_t::submit_work(const VkSubmitInfo& submit_info, const vk_fence_t* fence) const
     {
-        return semaphore.create(device);
-    }
-
-    error_t vulkan_t::create_fence(vk_fence_t &fence) const
-    {
-        return fence.create(device);
-    }
-
-    error_t vulkan_t::wait_for_fence(const vk_fence_t &fence, uint64_t timeout) const
-    {
-        auto fence_handle = fence.get_handle();
-        auto status = vkWaitForFences(device, 1, &fence_handle, VK_TRUE, timeout);
-
-        if(status == VK_SUCCESS)
-        {
-            return error_t::success;
-        }
-
-        if(status == VK_TIMEOUT)
-        {
-            return error_t::timeout;
-        }
-
-        return error_t::device_lost;
-    }
-
-    error_t vulkan_t::submit_work(const VkSubmitInfo& submit_info, const vk_fence_t& fence) const
-    {
-        auto fence_handle = fence.get_handle();
+        auto fence_handle = fence? fence->get_handle() : VK_NULL_HANDLE;
         if(vkQueueSubmit(queue, 1, &submit_info, fence_handle) != VK_SUCCESS)
         {
             return error_t::queue_submit_fail;
@@ -520,7 +449,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::wait_idle() const
+    error_t vk_device_t::wait_idle() const
     {
         if(vkQueueWaitIdle(queue) != VK_SUCCESS)
         {
@@ -530,18 +459,18 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vulkan_t::update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const
+    void vk_device_t::update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const
     {
         vkUpdateDescriptorSets(device, count, writes, 0, nullptr);
     }
 
-    error_t vulkan_t::get_next_swapchain_image(uint32_t &fb_index, const vk_semaphore_t& semaphore) const
+    error_t vk_device_t::get_next_swapchain_image(uint32_t &fb_index, const vk_semaphore_t* semaphore) const
     {
         vkAcquireNextImageKHR(
                                device,
                                swapchain,
                                std::numeric_limits<uint64_t>::max(),
-                               semaphore.get_handle(),
+                               semaphore->get_handle(),
                                VK_NULL_HANDLE,
                                &fb_index
                              );
@@ -549,9 +478,9 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::present_on_screen(uint32_t index, const vk_semaphore_t &wait_semaphore) const
+    error_t vk_device_t::present_on_screen(uint32_t index, const vk_semaphore_t* wait_semaphore) const
     {
-        auto wait_handle = wait_semaphore.get_handle();
+        auto wait_handle = wait_semaphore->get_handle();
         VkPresentInfoKHR present_info = {};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.pNext = nullptr;
@@ -570,7 +499,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::validate_surface_support()
+    error_t vk_device_t::validate_surface_support()
     {
         VkBool32 supported;
 
@@ -587,7 +516,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::pick_surface_format()
+    error_t vk_device_t::pick_surface_format()
     {
         std::vector<VkSurfaceFormatKHR> formats;
         uint32_t count;
@@ -624,7 +553,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vulkan_t::pick_present_mode()
+    error_t vk_device_t::pick_present_mode()
     {
         std::vector<VkPresentModeKHR> modes;
         uint32_t count;
@@ -649,7 +578,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::create_surface_and_swapchain()
+    error_t vk_device_t::create_surface_and_swapchain()
     {
         auto status = window->create_surface(instance, surface);
 
@@ -712,7 +641,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::get_swapchain_images()
+    error_t vk_device_t::get_swapchain_images()
     {
 
         uint32_t image_count;
@@ -758,7 +687,7 @@ namespace bpmap
     }
 
 
-    error_t vulkan_t::create_allocator()
+    error_t vk_device_t::create_allocator()
     {
         VmaAllocatorCreateInfo aci = {};
         aci.device = device;
@@ -780,19 +709,9 @@ namespace bpmap
     }
 
 
-    vulkan_t::~vulkan_t()
+    vk_device_t::~vk_device_t()
     {
         vkDeviceWaitIdle(device);
-
-        std::for_each(
-                       swapchain_image_views.begin(),
-                       swapchain_image_views.end(),
-                       [this](const VkImageView& image_view)
-                       {
-                            destroy_image_view(image_view);
-                       }
-                     );
-
         vkDestroySwapchainKHR(device, swapchain, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vmaDestroyAllocator(allocator);

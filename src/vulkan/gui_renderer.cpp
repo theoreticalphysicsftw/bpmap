@@ -19,17 +19,18 @@
 #include <limits>
 
 #include "gui_renderer.hpp"
-#include "shader_registry.hpp"
+
 
 namespace bpmap
 {
     gui_renderer_t::gui_renderer_t(
                                     gui_t& gui,
-                                    const vulkan_t& vk,
-                                    shader_registry_t& sr,
+                                    const vk_device_t& vk,
+                                    shader_registry_t& shr,
+                                    sampler_registry_t& sr,
                                     const renderer_t& r
                                   ) :
-        gui(&gui), vulkan(&vk), shader_registry(&sr), renderer(&r)
+        gui(&gui), vulkan(&vk), shader_registry(&shr), sampler_registry(&sr), renderer(&r)
     {
 
     }
@@ -49,7 +50,7 @@ namespace bpmap
         desc.on_gpu = true,
         desc.usage = vk_usage_transfer_dst | vk_usage_sampled;
 
-        if (vulkan->create_image(font_image, desc) != error_t::success)
+        if (font_image.create(*vulkan, desc) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -63,7 +64,7 @@ namespace bpmap
             .on_gpu = false
         };
 
-        if(vulkan->create_buffer(staging_buffer, staging_buffer_desc) != error_t::success)
+        if(staging_buffer.create(*vulkan, staging_buffer_desc) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -201,7 +202,7 @@ namespace bpmap
         submit_info.pWaitDstStageMask = nullptr;
         submit_info.pWaitSemaphores = nullptr;
 
-        if(vulkan->submit_work(submit_info, vk_fence_t()) != error_t::success)
+        if(vulkan->submit_work(submit_info, nullptr) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
@@ -211,24 +212,26 @@ namespace bpmap
         gui->finalize_font_atlas();
 
 
-        VkSamplerCreateInfo sci = {};
-        sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sci.pNext = nullptr;
-        sci.flags = 0;
-        sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sci.anisotropyEnable = VK_FALSE;
-        sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sci.mipLodBias = 0.0;
-        sci.compareEnable = VK_FALSE;
-        sci.minFilter = VK_FILTER_LINEAR;
-        sci.magFilter = VK_FILTER_LINEAR;
-        sci.minLod = 0.0;
-        sci.maxLod = 0.0;
-        sci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+        vk_sampler_desc_t font_sampler_desc;
+        vk_sampler_desc_t ro_sampler_desc;
+        status = sampler_registry->add(font_sampler_desc);
 
-        return vulkan->create_sampler(font_sampler, sci);
+        if (status != error_t::success)
+        {
+            return status;
+        }
+
+        font_sampler = &sampler_registry->get(font_sampler_desc);
+
+        status = sampler_registry->add(ro_sampler_desc);
+        if (status != error_t::success)
+        {
+            return status;
+        }
+
+        ro_sampler = &sampler_registry->get(ro_sampler_desc);
+
+        return error_t::success;
     }
 
 
@@ -304,12 +307,12 @@ namespace bpmap
         VkDescriptorImageInfo font_texture_bind_info = {};
         font_texture_bind_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         font_texture_bind_info.imageView = font_image.get_view();
-        font_texture_bind_info.sampler = font_sampler;
+        font_texture_bind_info.sampler = font_sampler->get_handle();
 
         VkDescriptorImageInfo render_output_bind_info = {};
         render_output_bind_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
         render_output_bind_info.imageView = renderer->get_output().get_view();
-        render_output_bind_info.sampler = renderer->render_output_sampler;
+        render_output_bind_info.sampler = ro_sampler->get_handle();
 
         VkWriteDescriptorSet wds[2] = {};
 
@@ -630,14 +633,14 @@ namespace bpmap
 
     error_t gui_renderer_t::create_semaphores()
     {
-        auto status = vulkan->create_semaphore(image_available);
+        auto status = image_available.create(*vulkan);
 
         if(status != error_t::success)
         {
             return status;
         }
 
-        return vulkan->create_semaphore(render_finished);
+        return render_finished.create(*vulkan);
     }
 
     error_t gui_renderer_t::allocate_buffers()
@@ -650,7 +653,7 @@ namespace bpmap
             .on_gpu = false
         };
 
-        auto status = vulkan->create_buffer(index_buffer, index_buffer_desc);
+        auto status = index_buffer.create(*vulkan, index_buffer_desc);
         if(status != error_t::success)
         {
             return status;
@@ -663,7 +666,7 @@ namespace bpmap
             .on_gpu = false
         };
 
-        status = vulkan->create_buffer(vertex_buffer, vertex_buffer_desc);
+        status = vertex_buffer.create(*vulkan, vertex_buffer_desc);
         if(status != error_t::success)
         {
             return status;
@@ -675,7 +678,7 @@ namespace bpmap
             .usage = vk_buffer_usage_uniform_buffer,
             .on_gpu = false
         };
-        status = vulkan->create_buffer(gui_data_buffer, gui_data_buffer_desc);
+        status = gui_data_buffer.create(*vulkan, gui_data_buffer_desc);
 
         if(status != error_t::success)
         {
@@ -835,7 +838,7 @@ namespace bpmap
     error_t gui_renderer_t::submit_command_buffer(uint32_t index)
     {
         vk_fence_t done_rendering;
-        vulkan->create_fence(done_rendering);
+        done_rendering.create(*vulkan);
 
         VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
@@ -854,14 +857,14 @@ namespace bpmap
 
         static constexpr uint64_t timeout = std::numeric_limits<uint64_t>::max();
 
-        vulkan->submit_work(submit_info, done_rendering);
+        vulkan->submit_work(submit_info, &done_rendering);
 
-        return vulkan->wait_for_fence(done_rendering, timeout);
+        return done_rendering.wait(timeout);
     }
 
     error_t gui_renderer_t::present_on_screen(uint64_t index)
     {
-        return vulkan->present_on_screen(index, render_finished);
+        return vulkan->present_on_screen(index, &render_finished);
     }
 
 
@@ -984,7 +987,7 @@ namespace bpmap
 
         uint32_t fb_index;
 
-        status = vulkan->get_next_swapchain_image(fb_index, image_available);
+        status = vulkan->get_next_swapchain_image(fb_index, &image_available);
 
         if(status != error_t::success)
         {
@@ -1011,9 +1014,6 @@ namespace bpmap
 
     gui_renderer_t::~gui_renderer_t()
     {
-        vulkan->destroy_sampler(font_sampler);
-        vulkan->destroy_image_view(font_view);
-
         vulkan->destroy_pipeline(pipeline);
         vulkan->destroy_pipeline(render_output_pipeline);
         vulkan->destroy_pipeline_layout(pipeline_layout);

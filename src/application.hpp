@@ -21,7 +21,6 @@
 
 #include "window/window.hpp"
 #include "vulkan/vulkan.hpp"
-#include "vulkan/shader_registry.hpp"
 #include "vulkan/renderer.hpp"
 #include "vulkan/gui_renderer.hpp"
 #include "gui/gui.hpp"
@@ -33,13 +32,14 @@ namespace bpmap
 
     class application_t
     {
-        vulkan_t vulkan;
+        vk_device_t vulkan;
         renderer_t renderer;
         gui_renderer_t gui_renderer;
         window_t window;
         gui_t gui;
         scene_t scene;
         shader_registry_t shader_registry;
+        sampler_registry_t sampler_registry;
 
     public:
 

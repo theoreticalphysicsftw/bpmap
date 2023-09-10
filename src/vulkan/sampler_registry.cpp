@@ -16,42 +16,41 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#include "vulkan.hpp"
-#include "semaphore.hpp"
+#include "sampler_registry.hpp"
 
 
 namespace bpmap
 {
-    error_t vk_semaphore_t::create(const vk_device_t& device)
+    error_t sampler_registry_t::add(const vk_sampler_desc_t& desc)
     {
-        VkSemaphoreCreateInfo sci = {};
-        sci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        sci.pNext = nullptr;
-        sci.flags = 0;
-
-        if(vkCreateSemaphore(device.get_device(), &sci, nullptr, &semaphore) != VK_SUCCESS)
+        if (desc_to_id.find(desc) != desc_to_id.end())
         {
-            return error_t::semaphore_creation_fail;
+            return error_t::success;
         }
 
-        dev = &device;
+        uint32_t id = samplers.size();
+
+        samplers.emplace_back();
+        
+        auto& sampler = samplers.back();
+
+        auto status = sampler.create(*dev, desc);
+
+        if (status != error_t::success)
+        {
+            samplers.pop_back();
+            return status;
+        }
+
+        desc_to_id.emplace(desc, id); 
 
         return error_t::success;
     }
+    
 
-
-    vk_semaphore_t::vk_semaphore_t()
+    vk_sampler_t& sampler_registry_t::get(const vk_sampler_desc_t& desc)
     {
-        dev = nullptr;
-        semaphore = VK_NULL_HANDLE;
-    }
-
-
-    vk_semaphore_t::~vk_semaphore_t()
-    {
-        if(dev)
-        {
-            vkDestroySemaphore(dev->get_device(), semaphore, nullptr);
-        }
+        DEBUG_VERIFY(desc_to_id.find(desc) != desc_to_id.end());
+        return samplers[desc_to_id[desc]];
     }
 }

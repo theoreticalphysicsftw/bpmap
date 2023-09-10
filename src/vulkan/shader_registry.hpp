@@ -19,7 +19,6 @@
 #ifndef SHADER_REGISTRY_HPP
 #define SHADER_REGISTRY_HPP
 
-#include "shader.hpp"
 #include "core/io.hpp"
 #include "vulkan.hpp"
 
@@ -32,10 +31,10 @@ namespace bpmap
         deque_t<vk_shader_t> shaders; 
         hash_table_t<string_t, vk_shader_id_t> name_to_id;
 
-        const vulkan_t* vulkan;
+        const vk_device_t* dev;
 
         public:
-        shader_registry_t(const vulkan_t& vulkan) : vulkan(&vulkan) {}
+        shader_registry_t(const vk_device_t& device) : dev(&device) {}
 
         error_t add(
                      const string_t& name,

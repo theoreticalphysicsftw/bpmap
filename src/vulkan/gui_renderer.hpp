@@ -51,9 +51,8 @@ namespace bpmap
         vk_shader_t fragment_shader;
 
         vk_image_t font_image;
-
-        VkImageView font_view;
-        VkSampler font_sampler;
+        const vk_sampler_t* font_sampler;
+        const vk_sampler_t* ro_sampler;
 
         vk_buffer_t vertex_buffer;
         vk_buffer_t index_buffer;
@@ -62,9 +61,10 @@ namespace bpmap
         gui_data_t gui_data;
 
         gui_t* gui;
-        const vulkan_t* vulkan;
+        const vk_device_t* vulkan;
         const renderer_t* renderer;
         shader_registry_t* shader_registry;
+        sampler_registry_t* sampler_registry;
 
         error_t setup_font_texture();
         error_t create_descriptor_sets_layout();
@@ -98,8 +98,9 @@ namespace bpmap
 
         gui_renderer_t(
                         gui_t& gui, 
-                        const vulkan_t& vk,
+                        const vk_device_t& vk,
                         shader_registry_t& shader_registry,
+                        sampler_registry_t& sampler_registry,
                         const renderer_t& r
                       );
 

@@ -30,9 +30,10 @@ namespace bpmap
                                   const string_t& app_name
                                 ) :
         gui(window),
-        renderer(vulkan, scene, shader_registry),
-        gui_renderer(gui, vulkan, shader_registry, renderer),
-        shader_registry(vulkan)
+        renderer(vulkan, scene, shader_registry, sampler_registry),
+        gui_renderer(gui, vulkan, shader_registry, sampler_registry, renderer),
+        shader_registry(vulkan),
+        sampler_registry(vulkan)
     {
         verify(window.init({res_x, res_y, app_name}));
 

@@ -16,15 +16,8 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef BUFFER_HPP
-#define BUFFER_HPP
-
-
-#include <common.hpp>
-#include <error.hpp>
-
-#include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
+#ifndef VULKAN_BUFFER_HPP
+#define VULKAN_BUFFER_HPP
 
 
 namespace bpmap
@@ -52,19 +45,23 @@ namespace bpmap
 
     class vk_buffer_t
     {
-        VmaAllocation allocation = VK_NULL_HANDLE;
-        VmaAllocator allocator = VK_NULL_HANDLE;
-        VkBuffer buffer = VK_NULL_HANDLE;
-        size_t size = 0;
+        const vk_device_t* dev;
+        VmaAllocation allocation;
+        VkBuffer buffer;
+        size_t size;
+
+        vk_buffer_t(const vk_buffer_t&) = delete;
+        vk_buffer_t& operator=(const vk_buffer_t&) = delete;
 
     public:
         VkBuffer get_handle() const { return buffer; }
         size_t get_size() const { return size; }
-        error_t create(VmaAllocator allocator, const vk_buffer_desc_t& desc);
+        error_t create(const vk_device_t& device, const vk_buffer_desc_t& desc);
 
         error_t map(void** data);
         void unmap();
 
+        vk_buffer_t();
         ~vk_buffer_t();
     };
 

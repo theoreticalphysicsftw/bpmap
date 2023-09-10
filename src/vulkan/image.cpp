@@ -16,6 +16,7 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#include "vulkan.hpp"
 #include "image.hpp"
 
 namespace bpmap
@@ -45,8 +46,7 @@ namespace bpmap
 
 
     error_t vk_image_t::create(
-                                VkDevice device,
-                                VmaAllocator allocator,
+                                const vk_device_t& device,
                                 const vk_image_desc_t& desc
                               )
     {
@@ -78,7 +78,7 @@ namespace bpmap
         
         if(
             vmaCreateImage(
-                            allocator,
+                            device.get_allocator(),
                             &ici,
                             &aci,
                             &image,
@@ -91,7 +91,8 @@ namespace bpmap
             return error_t::image_creation_fail;
         }
 
-        this->allocator = allocator;
+        dev = &device;
+        wrapped = false;
 
         VkImageSubresourceRange isr = {};
         isr.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -116,7 +117,7 @@ namespace bpmap
             VK_COMPONENT_SWIZZLE_A
         };
 
-        if(vkCreateImageView(device, &ivci, nullptr, &view) != VK_SUCCESS)
+        if(vkCreateImageView(device.get_device(), &ivci, nullptr, &view) != VK_SUCCESS)
         {
             return error_t::image_view_creation_fail;
         }
@@ -127,16 +128,23 @@ namespace bpmap
 
     vk_image_t::vk_image_t()
     {
-        allocator = VK_NULL_HANDLE;
+        dev = nullptr;
+        allocation = VK_NULL_HANDLE;
         image = VK_NULL_HANDLE;
+        view = VK_NULL_HANDLE;
+        wrapped = false;
     }
 
 
     vk_image_t::~vk_image_t()
     {
-        if(allocator != VK_NULL_HANDLE)
+        if(!wrapped && image != VK_NULL_HANDLE)
         {
-            vmaDestroyImage(allocator, image, allocation);
+            vmaDestroyImage(dev->get_allocator(), image, allocation);
+        }
+        if(view != VK_NULL_HANDLE)
+        {
+            vkDestroyImageView(dev->get_device(), view, nullptr);
         }
     }
 }

@@ -20,12 +20,6 @@
 #define SHADER_HPP
 
 
-#include <common.hpp>
-#include <error.hpp>
-
-#include <vulkan/vulkan.h>
-
-
 namespace bpmap
 {
     using vk_shader_id_t = size_t;
@@ -41,9 +35,9 @@ namespace bpmap
 
     class vk_shader_t
     {
+        const vk_device_t* dev;
         vk_shader_stage_t type;
         VkShaderModule shader;
-        VkDevice device;
 
         vk_shader_t(const vk_shader_t& other) = delete;
         vk_shader_t& operator=(const vk_shader_t& other) = delete;
@@ -56,12 +50,12 @@ namespace bpmap
         vk_shader_stage_t get_type() const { return type; }
 
         error_t create(
-                        VkDevice dev,
+                        const vk_device_t& device,
                         const uint32_t* data,
                         size_t size,
                         vk_shader_stage_t type
                       );
     };
-};
+}
 
 #endif

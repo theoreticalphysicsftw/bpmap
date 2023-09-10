@@ -8,11 +8,12 @@
 namespace bpmap
 {
     renderer_t::renderer_t(
-                            const vulkan_t& vulkan,
+                            const vk_device_t& vulkan,
                             const scene_t& scene,
-                            shader_registry_t& registry
+                            shader_registry_t& shr,
+                            sampler_registry_t& sr
                           ) :
-        vulkan(&vulkan), scene(&scene), shader_registry(&registry)
+        vulkan(&vulkan), scene(&scene), shader_registry(&shr), sampler_registry(&sr)
     {
 
     }
@@ -114,7 +115,7 @@ namespace bpmap
         }
 
 
-        if(vulkan->wait_for_fence(render_finished, 0) == error_t::success)
+        if(render_finished.wait() == error_t::success)
         {
             busy = false;
         }
@@ -179,7 +180,7 @@ namespace bpmap
             submit_info.commandBufferCount = 1;
             submit_info.pCommandBuffers = &command_buffer;
 
-            auto status = vulkan->submit_work(submit_info, render_finished);
+            auto status = vulkan->submit_work(submit_info, &render_finished);
 
             if(status != error_t::success)
             {
@@ -200,13 +201,12 @@ namespace bpmap
         cbai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         cbai.commandPool = command_pool.pool;
         cbai.commandBufferCount = 1;
-
         return vulkan->create_command_buffers(&command_buffer, cbai);
     }
 
     error_t renderer_t::create_synchronization_primitives()
     {
-        return vulkan->create_fence(render_finished);
+        return render_finished.create(*vulkan);
     }
 
     error_t renderer_t::create_image()
@@ -220,7 +220,7 @@ namespace bpmap
         desc.on_gpu = true;
         desc.usage = vk_usage_storage | vk_usage_sampled;
         
-        if (vulkan->create_image(render_output, desc) != error_t::success)
+        if (render_output.create(*vulkan, desc) != error_t::success)
         {
             return error_t::render_output_setup_fail;
         }
@@ -292,47 +292,22 @@ namespace bpmap
         submit_info.pWaitDstStageMask = nullptr;
         submit_info.pWaitSemaphores = nullptr;
 
-        vulkan->create_fence(tmp_fence);
+        tmp_fence.create(*vulkan);
 
-        if(vulkan->submit_work(submit_info, tmp_fence) != error_t::success)
+        if(vulkan->submit_work(submit_info, &tmp_fence) != error_t::success)
         {
             return error_t::render_output_setup_fail;
         }
 
         auto timeout = std::numeric_limits<uint64_t>::max();
 
-        vulkan->wait_for_fence(tmp_fence, timeout);
-
-        // Create Sampler.
-        VkSamplerCreateInfo sci = {};
-        sci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        sci.pNext = nullptr;
-        sci.flags = 0;
-        sci.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sci.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sci.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        sci.anisotropyEnable = VK_FALSE;
-        sci.maxAnisotropy = 1;
-        sci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sci.mipLodBias = 0.0;
-        sci.compareEnable = VK_FALSE;
-        sci.minFilter = VK_FILTER_LINEAR;
-        sci.magFilter = VK_FILTER_LINEAR;
-        sci.minLod = 0.0;
-        sci.maxLod = 0.0;
-        sci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-
-        if(vulkan->create_sampler(render_output_sampler, sci) != error_t::success)
-        {
-            return error_t::render_output_setup_fail;
-        }
+        tmp_fence.wait(timeout);
 
         return error_t::success;
     }
 
     renderer_t::~renderer_t()
     {
-        vulkan->destroy_sampler(render_output_sampler);
         vulkan->destroy_descriptor_pool(descriptor_pool);
         vulkan->destroy_descriptor_set_layout(descriptor_set_layout);
         vulkan->destroy_pipeline_layout(compute_pipeline_layouts[raytrace_pipeline]);
@@ -433,7 +408,7 @@ namespace bpmap
             .on_gpu = false
         };
 
-        if(vulkan->create_buffer(staging_buffer, staging_buffer_desc) != error_t::success)
+        if(staging_buffer.create(*vulkan, staging_buffer_desc) != error_t::success)
         {
             return error_t::buffer_creation_fail;
         }
@@ -487,7 +462,7 @@ namespace bpmap
             .on_gpu = false
         };
 
-        if(vulkan->create_buffer(scene_settings, scene_settings_buffer_desc) != error_t::success)
+        if(scene_settings.create(*vulkan, scene_settings_buffer_desc) != error_t::success)
         {
             return status;
         }
@@ -519,7 +494,7 @@ namespace bpmap
             .on_gpu = true
         };
 
-        if(vulkan->create_buffer(buffer, desc) != error_t::success)
+        if(buffer.create(*vulkan, desc) != error_t::success)
         {
             return error_t::buffer_creation_fail;
         }
@@ -582,7 +557,7 @@ namespace bpmap
 
         vk_fence_t fence;
 
-        status = vulkan->create_fence(fence);
+        status = fence.create(*vulkan);
 
         if(status != error_t::success)
         {
@@ -591,9 +566,9 @@ namespace bpmap
 
         auto timeout = std::numeric_limits<uint64_t>::max();
 
-        vulkan->submit_work(submit_info, fence);
+        vulkan->submit_work(submit_info, &fence);
 
-        vulkan->wait_for_fence(fence, timeout);
+        fence.wait(timeout);
 
         return error_t::success;
     }
@@ -620,7 +595,7 @@ namespace bpmap
 
         VkDescriptorImageInfo render_output_info;
         render_output_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        render_output_info.sampler = render_output_sampler;
+        render_output_info.sampler = VK_NULL_HANDLE;
         render_output_info.imageView = render_output.get_view();
 
         wds[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

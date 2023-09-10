@@ -16,6 +16,7 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#include "vulkan.hpp"
 #include "buffer.hpp"
 
 
@@ -23,7 +24,7 @@ namespace bpmap
 {
     error_t vk_buffer_t::map(void** data)
     {
-        if(vmaMapMemory(allocator, allocation, data) != VK_SUCCESS)
+        if(vmaMapMemory(dev->get_allocator(), allocation, data) != VK_SUCCESS)
         {
             return error_t::memory_mapping_fail;
         }
@@ -34,20 +35,29 @@ namespace bpmap
 
     void vk_buffer_t::unmap()
     {
-        vmaUnmapMemory(allocator, allocation);
+        vmaUnmapMemory(dev->get_allocator(), allocation);
+    }
+
+
+    vk_buffer_t::vk_buffer_t()
+    {
+        dev = nullptr;
+        allocation = VK_NULL_HANDLE;
+        buffer = VK_NULL_HANDLE;
+        size = 0;
     }
 
 
     vk_buffer_t::~vk_buffer_t()
     {
-        if(allocator != VK_NULL_HANDLE)
+        if(dev)
         {
-            vmaDestroyBuffer(allocator, buffer, allocation);
+            vmaDestroyBuffer(dev->get_allocator(), buffer, allocation);
         }
     }
 
 
-    error_t vk_buffer_t::create(VmaAllocator alloc, const vk_buffer_desc_t& desc)
+    error_t vk_buffer_t::create(const vk_device_t& device, const vk_buffer_desc_t& desc)
     {
 
         VkBufferCreateInfo bci = {};
@@ -70,7 +80,7 @@ namespace bpmap
 
         if(
             vmaCreateBuffer(
-                            alloc,
+                            device.get_allocator(),
                             &bci,
                             &aci,
                             &buffer,
@@ -83,7 +93,7 @@ namespace bpmap
             return error_t::buffer_creation_fail;
         }
 
-        allocator = alloc;
+        dev = &device;
         size = bci.size;
 
         return error_t::success;

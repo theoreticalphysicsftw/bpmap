@@ -28,13 +28,18 @@ namespace bpmap
                                     vk_shader_stage_t type
                                   )
     {
+        if (name_to_id.find(name) != name_to_id.end())
+        {
+            return error_t::success;
+        }
+
         vk_shader_id_t id = shaders.size();
 
         shaders.emplace_back();
         
         auto& shader = shaders.back();
 
-        auto status = vulkan->create_shader(shader, code, size, type);
+        auto status = shader.create(*dev, code, size, type);
 
         if (status != error_t::success)
         {

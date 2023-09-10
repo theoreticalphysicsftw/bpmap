@@ -16,6 +16,7 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
+#include "vulkan.hpp"
 #include "shader.hpp"
 
 
@@ -23,7 +24,7 @@ namespace bpmap
 {
     vk_shader_t::vk_shader_t() :
         type(vk_shader_stage_t::invalid),
-        device(VK_NULL_HANDLE),
+        dev(nullptr),
         shader(VK_NULL_HANDLE)
     {
     }
@@ -32,13 +33,13 @@ namespace bpmap
     {
         if (shader != VK_NULL_HANDLE)
         {
-            vkDestroyShaderModule(device, shader, nullptr);
+            vkDestroyShaderModule(dev->get_device(), shader, nullptr);
         }
     }
 
 
     error_t vk_shader_t::create(
-                                  VkDevice dev,
+                                  const vk_device_t& device,
                                   const uint32_t* data,
                                   size_t size,
                                   vk_shader_stage_t type
@@ -51,12 +52,12 @@ namespace bpmap
         smci.codeSize = size;
         smci.pCode = data;
 
-        if(vkCreateShaderModule(dev, &smci, nullptr, &shader) != VK_SUCCESS)
+        if(vkCreateShaderModule(device.get_device(), &smci, nullptr, &shader) != VK_SUCCESS)
         {
             return error_t::shader_creation_fail;
         }
 
-        device = dev;
+        dev = &device;
 
         return error_t::success;
     }

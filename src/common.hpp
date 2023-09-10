@@ -24,13 +24,17 @@
 #endif
 
 #include <cstdint>
-#include <string>
 #include <cstring>
+
+#include <string>
+#include <string_view>
+
 #include <vector>
 #include <deque>
 #include <unordered_map>
 #include <unordered_set>
 #include <array>
+
 #include <variant>
 #include <utility>
 
@@ -50,6 +54,7 @@ namespace bpmap
     using float_t = float;
     using double_t = double;
     using string_t = std::string;
+    using string_view_t = std::string_view;
 
     template <typename T>
     using darray_t = std::vector<T>;
@@ -66,8 +71,8 @@ namespace bpmap
     template <typename T, typename U>
     using pair_t = std::pair<T,U>;
 
-    template<typename K, typename V>
-    using hash_table_t = std::unordered_map<K,V>;
+    template<typename K, typename V, typename H = std::hash<K>>
+    using hash_table_t = std::unordered_map<K,V,H>;
 
     template<typename T>
     using hash_set_t = std::unordered_set<T>;

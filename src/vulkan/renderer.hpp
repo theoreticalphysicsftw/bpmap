@@ -5,16 +5,17 @@
 #include <scene/scene.hpp>
 
 #include "vulkan.hpp"
-#include "shader_registry.hpp"
+
 
 namespace bpmap
 {
 
     class renderer_t
     {
-        const vulkan_t* vulkan;
+        const vk_device_t* vulkan;
         const scene_t* scene;
         shader_registry_t* shader_registry;
+        sampler_registry_t* sampler_registry;
 
         vk_image_t render_output;
 
@@ -72,9 +73,10 @@ namespace bpmap
         static constexpr const char* raytrace_cs_name = "raytrace.comp.spv";
 
         renderer_t(
-                    const vulkan_t& vulkan,
+                    const vk_device_t& vulkan,
                     const scene_t& scene,
-                    shader_registry_t& registry
+                    shader_registry_t& shr,
+                    sampler_registry_t& sr
                   );
 
         error_t init();
@@ -83,8 +85,6 @@ namespace bpmap
 
         error_t build_command_buffers();
         error_t submit_command_buffers();
-
-        VkSampler render_output_sampler;
 
         ~renderer_t();
 

@@ -16,9 +16,15 @@
 // along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
 
 
-#ifndef PSO_HPP
-#define PSO_HPP
+#ifndef VULKAN_PSO_HPP
+#define VULKAN_PSO_HPP
 
 
-
+namespace bpmap
+{
+    struct pso_desc_t
+    {
+        bool_t is_compute = true;
+    };
+}
 #endif
