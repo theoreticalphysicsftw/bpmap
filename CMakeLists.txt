@@ -27,8 +27,11 @@ if((DEFINED CMAKE_BUILD_TYPE))
     endif()
 endif()
 
-set(RELEASE_OPTIONS "-O3" "-fno-exceptions" "-std=c++17")
-set(DEBUG_OPTIONS "-g" "-O0" "-std=c++17")
+if (CMAKE_COMPILER_IS_GNUCC)
+    # Silence warnings from vk_mem_alloc.h
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wno-c++20-extensions")
+endif()
 
 file(
       GLOB
@@ -54,21 +57,27 @@ set(GLFW_VULKAN_STATIC "NO")
 add_subdirectory("third_party/glfw3")
 link_directories("third_party/glfw3")
 
+file(
+      GLOB
+      SHADERS
+      "src/gpu/*.frag"
+      "src/gpu/*.vert"
+      "src/gpu/*.comp"
+    )
 
-execute_process(COMMAND "glslangValidator" "-V" "-o" "${PROJECT_BINARY_DIR}/gui.vert.spv" "gui.vert" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/gpu" OUTPUT_VARIABLE ov0)
-execute_process(COMMAND "glslangValidator" "-V" "-o" "${PROJECT_BINARY_DIR}/gui.frag.spv" "gui.frag" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/gpu" OUTPUT_VARIABLE ov1)
-execute_process(COMMAND "glslangValidator" "-V" "-o" "${PROJECT_BINARY_DIR}/raytrace.comp.spv" "raytrace.comp" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/gpu" OUTPUT_VARIABLE ov2)
-execute_process(COMMAND "glslangValidator" "-V" "-o" "${PROJECT_BINARY_DIR}/render_output.vert.spv" "render_output.vert" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/gpu" OUTPUT_VARIABLE ov3)
-execute_process(COMMAND "glslangValidator" "-V" "-o" "${PROJECT_BINARY_DIR}/render_output.frag.spv" "render_output.frag" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/src/gpu" OUTPUT_VARIABLE ov4)
-message("Compiled ${ov0}.")
-message("Compiled ${ov1}.")
-message("Compiled ${ov2}.")
-message("Compiled ${ov3}.")
-message("Compiled ${ov4}.")
-
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release")
-endif(NOT CMAKE_BUILD_TYPE)
+foreach(SHADER_PATH ${SHADERS})
+    cmake_path(GET SHADER_PATH FILENAME SHADER_NAME)
+    execute_process(
+                     COMMAND
+                     "glslangValidator" "-V" "-o"
+                     "${PROJECT_BINARY_DIR}/${SHADER_NAME}.spv"
+                     "${SHADER_PATH}"
+                     WORKING_DIRECTORY
+                     "${PROJECT_SOURCE_DIR}"
+                     OUTPUT_VARIABLE SHADER_COMPILE_STATUS
+                    )
+     message("Compiled ${SHADER_COMPILE_STATUS}.")
+endforeach()
 
 if(NOT (DEFINED DONT_COPY_TEST_SCENE))
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test_scene/b5.obj ${CMAKE_CURRENT_BINARY_DIR}/b5.obj COPYONLY)

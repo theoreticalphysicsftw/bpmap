@@ -500,8 +500,8 @@ namespace bpmap
         gpci.pDepthStencilState = &pdssci;
         gpci.pColorBlendState = &pcbsci;
         gpci.pDynamicState = &pdsci;
-        gpci.renderPass = render_pass;
-        gpci.subpass = 1;
+        gpci.renderPass = render_pass_gui;
+        gpci.subpass = 0;
         gpci.layout = pipeline_layout;
 
         auto status = vulkan->create_graphics_pipeline(pipeline, gpci);
@@ -513,11 +513,11 @@ namespace bpmap
 
         pssci[0].module = shader_registry->get(render_output_vs_name).get_handle();
         pssci[1].module = shader_registry->get(render_output_fs_name).get_handle();
-        gpci.subpass = 0;
 
         pvisci.vertexBindingDescriptionCount = 0;
         pvisci.vertexAttributeDescriptionCount = 0;
 
+        gpci.renderPass = render_pass_ro;
         return vulkan->create_graphics_pipeline(render_output_pipeline, gpci);
     }
 
@@ -577,12 +577,22 @@ namespace bpmap
         rpci.flags = 0;
         rpci.attachmentCount = 1;
         rpci.pAttachments = &attachment_description;
-        rpci.subpassCount = 2;
+        rpci.subpassCount = 1;
         rpci.pSubpasses = subpasses;
-        rpci.dependencyCount = 1;
-        rpci.pDependencies = &dependencies;
+        rpci.dependencyCount = 0;
+        rpci.pDependencies = nullptr;
 
-        return vulkan->create_renederpass(render_pass, rpci);
+
+        auto status = vulkan->create_renederpass(render_pass_ro, rpci);
+
+        if (status != error_t::success)
+        {
+            return status;
+        }
+
+
+        attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        return vulkan->create_renederpass(render_pass_gui, rpci);
     }
 
 
@@ -592,7 +602,7 @@ namespace bpmap
         fbci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         fbci.pNext = nullptr;
         fbci.flags = 0;
-        fbci.renderPass = render_pass;
+        fbci.renderPass = render_pass_gui;
 
         return vulkan->create_framebuffers(framebuffers, fbci);
     }
@@ -742,16 +752,16 @@ namespace bpmap
         render_area.extent = extent;
         render_area.offset = offset;  
 
-        // VkClearValue clear_values;
-        // clear_values.color = {0.0,0.0,0.0,0.0};
+         VkClearValue clear_values;
+         clear_values.color = {0.0,0.0,0.0,0.0};
 
         VkRenderPassBeginInfo rpbi = {};
         rpbi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         rpbi.pNext = nullptr;
-        rpbi.renderPass = render_pass;
+        rpbi.renderPass = render_pass_ro;
         rpbi.framebuffer = framebuffers[index];
-        rpbi.clearValueCount = 0;
-        rpbi.pClearValues = nullptr;
+        rpbi.clearValueCount = 1;
+        rpbi.pClearValues = &clear_values;
         rpbi.renderArea = render_area;
 
         VkViewport viewport;
@@ -782,11 +792,30 @@ namespace bpmap
         vkCmdSetViewport(command_buffers[index], 0, 1, &viewport);
 
         vkCmdDraw(command_buffers[index], 6, 1, 0, 0);
+        vkCmdEndRenderPass(command_buffers[index]);
 
+        VkMemoryBarrier barrier;
+        barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        barrier.pNext = nullptr;
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        vkCmdPipelineBarrier(
+                              command_buffers[index],
+                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                              VK_DEPENDENCY_BY_REGION_BIT,
+                              1,
+                              &barrier,
+                              0,
+                              nullptr,
+                              0,
+                              nullptr
+                            );
 
         // Draw Gui
-
-        vkCmdNextSubpass(command_buffers[index], VK_SUBPASS_CONTENTS_INLINE);
+        rpbi.renderPass = render_pass_gui;
+        vkCmdBeginRenderPass(command_buffers[index], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdSetViewport(command_buffers[index], 0, 1, &viewport);
 
@@ -830,8 +859,9 @@ namespace bpmap
         }
 
         vkCmdEndRenderPass(command_buffers[index]);
-        vkEndCommandBuffer(command_buffers[index]);
 
+        vkEndCommandBuffer(command_buffers[index]);
+        
         return error_t::success;
     }
 
@@ -1018,7 +1048,6 @@ namespace bpmap
         vulkan->destroy_pipeline(render_output_pipeline);
         vulkan->destroy_pipeline_layout(pipeline_layout);
         vulkan->destroy_framebuffers(framebuffers);
-        vulkan->destroy_render_pass(render_pass);
         vulkan->destroy_descriptor_set_layout(descriptor_set_layout);
         vulkan->destroy_descriptor_pool(descriptor_pool);
     }

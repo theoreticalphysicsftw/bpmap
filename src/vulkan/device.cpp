@@ -690,6 +690,7 @@ namespace bpmap::vk
     error_t device_t::create_allocator()
     {
         VmaAllocatorCreateInfo aci = {};
+        aci.instance = instance;
         aci.device = device;
         aci.physicalDevice = gpu_device;
         aci.flags = 0;
@@ -697,7 +698,6 @@ namespace bpmap::vk
         aci.pDeviceMemoryCallbacks = nullptr;
         aci.pVulkanFunctions = nullptr;
         aci.pHeapSizeLimit = nullptr;
-        aci.frameInUseCount = 0;
         aci.preferredLargeHeapBlockSize = 0;
 
         if(vmaCreateAllocator(&aci, &allocator) != VK_SUCCESS)

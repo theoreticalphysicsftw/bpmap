@@ -32,7 +32,8 @@ namespace bpmap
         VkPipeline pipeline;
         VkPipeline render_output_pipeline;
         VkPipelineLayout pipeline_layout;
-        VkRenderPass render_pass;
+        VkRenderPass render_pass_ro;
+        VkRenderPass render_pass_gui;
         VkDescriptorSetLayout descriptor_set_layout;
         VkDescriptorPool descriptor_pool;
         VkDescriptorSet descriptor_set;

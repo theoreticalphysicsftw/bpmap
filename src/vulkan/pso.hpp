@@ -26,5 +26,23 @@ namespace bpmap::vk
     {
         bool_t is_compute = true;
     };
+
+    class pso_t
+    {
+        const device_t* device;
+
+        VkPipeline pso;
+        VkPipelineLayout layout;
+        VkRenderPass render_pass;
+
+        pso_desc_t info;
+
+        public:
+
+        error_t create(const device_t& device, const pso_desc_t& desc);
+
+        pso_t();
+        ~pso_t();
+    };
 }
 #endif
