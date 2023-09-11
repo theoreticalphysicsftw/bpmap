@@ -21,22 +21,22 @@
 
 #include "vulkan.hpp"
 
-namespace bpmap
+namespace bpmap::vk
 {
     class sampler_registry_t
     {
         // We don't want registering new samplers to invalidate
         // others by calling destructors.
-        deque_t<vk_sampler_t> samplers; 
-        hash_table_t<vk_sampler_desc_t, uint32_t, vk_sampler_desc_hash_t> desc_to_id;
+        deque_t<sampler_t> samplers; 
+        hash_table_t<sampler_desc_t, uint32_t, sampler_desc_hash_t> desc_to_id;
 
-        const vk_device_t* dev;
+        const device_t* dev;
 
         public:
-        sampler_registry_t(const vk_device_t& device) : dev(&device) {}
+        sampler_registry_t(const device_t& device) : dev(&device) {}
 
-        error_t add(const vk_sampler_desc_t& desc);
-        vk_sampler_t& get(const vk_sampler_desc_t& desc);
+        error_t add(const sampler_desc_t& desc);
+        sampler_t& get(const sampler_desc_t& desc);
     };
 }
 

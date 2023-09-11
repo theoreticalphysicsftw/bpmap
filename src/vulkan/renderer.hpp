@@ -12,15 +12,15 @@ namespace bpmap
 
     class renderer_t
     {
-        const vk_device_t* vulkan;
+        const vk::device_t* vulkan;
         const scene_t* scene;
-        shader_registry_t* shader_registry;
-        sampler_registry_t* sampler_registry;
+        vk::shader_registry_t* shader_registry;
+        vk::sampler_registry_t* sampler_registry;
 
-        vk_image_t render_output;
+        vk::image_t render_output;
 
-        vk_fence_t render_finished;
-        vk_fence_t tmp_fence;
+        vk::fence_t render_finished;
+        vk::fence_t tmp_fence;
 
         bool_t busy = false;
 
@@ -36,20 +36,20 @@ namespace bpmap
         VkDescriptorSet descriptor_set;
 
         VkCommandBuffer command_buffer;
-        vk_command_pool_t command_pool;
+        vk::command_pool_t command_pool;
 
 
-        vk_buffer_t triangles;
+        vk::buffer_t triangles;
 
-        vk_buffer_t vertices;
-        vk_buffer_t normals;
-        vk_buffer_t texcoords;
+        vk::buffer_t vertices;
+        vk::buffer_t normals;
+        vk::buffer_t texcoords;
 
-        vk_buffer_t materials;
+        vk::buffer_t materials;
 
-        vk_buffer_t lights;
+        vk::buffer_t lights;
 
-        vk_buffer_t scene_settings;
+        vk::buffer_t scene_settings;
 
         error_t create_shaders();
 
@@ -66,17 +66,17 @@ namespace bpmap
         error_t create_image();
 
         template <typename T>
-        error_t create_and_upload_buffer(vk_buffer_t& buffer, const T& data, vk_buffer_t& staging_buffer);
+        error_t create_and_upload_buffer(vk::buffer_t& buffer, const T& data, vk::buffer_t& staging_buffer);
 
 
     public:
         static constexpr const char* raytrace_cs_name = "raytrace.comp.spv";
 
         renderer_t(
-                    const vk_device_t& vulkan,
+                    const vk::device_t& vulkan,
                     const scene_t& scene,
-                    shader_registry_t& shr,
-                    sampler_registry_t& sr
+                    vk::shader_registry_t& shr,
+                    vk::sampler_registry_t& sr
                   );
 
         error_t init();
@@ -88,7 +88,7 @@ namespace bpmap
 
         ~renderer_t();
 
-        const vk_image_t& get_output() const { return render_output; }
+        const vk::image_t& get_output() const { return render_output; }
     };
 
 }

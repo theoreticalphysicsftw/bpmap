@@ -20,9 +20,9 @@
 #include "semaphore.hpp"
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    error_t vk_semaphore_t::create(const vk_device_t& device)
+    error_t semaphore_t::create(const device_t& device)
     {
         VkSemaphoreCreateInfo sci = {};
         sci.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -40,14 +40,14 @@ namespace bpmap
     }
 
 
-    vk_semaphore_t::vk_semaphore_t()
+    semaphore_t::semaphore_t()
     {
         dev = nullptr;
         semaphore = VK_NULL_HANDLE;
     }
 
 
-    vk_semaphore_t::~vk_semaphore_t()
+    semaphore_t::~semaphore_t()
     {
         if(dev)
         {

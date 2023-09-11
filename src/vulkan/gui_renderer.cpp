@@ -25,9 +25,9 @@ namespace bpmap
 {
     gui_renderer_t::gui_renderer_t(
                                     gui_t& gui,
-                                    const vk_device_t& vk,
-                                    shader_registry_t& shr,
-                                    sampler_registry_t& sr,
+                                    const vk::device_t& vk,
+                                    vk::shader_registry_t& shr,
+                                    vk::sampler_registry_t& sr,
                                     const renderer_t& r
                                   ) :
         gui(&gui), vulkan(&vk), shader_registry(&shr), sampler_registry(&sr), renderer(&r)
@@ -42,25 +42,25 @@ namespace bpmap
         extent.width = gui->get_font_width();
         extent.depth = 1;
 
-        vk_image_desc_t desc;
+        vk::image_desc_t desc;
         desc.width = gui->get_font_width();
         desc.height = gui->get_font_height(),
-        desc.format = vk_image_format_t::rgba8u,
-        desc.tiling = vk_image_tiling_t::optimal,
+        desc.format = vk::image_format_t::rgba8u,
+        desc.tiling = vk::image_tiling_t::optimal,
         desc.on_gpu = true,
-        desc.usage = vk_usage_transfer_dst | vk_usage_sampled;
+        desc.usage = vk::usage_transfer_dst | vk::usage_sampled;
 
         if (font_image.create(*vulkan, desc) != error_t::success)
         {
             return error_t::font_texture_setup_fail;
         }
 
-        vk_buffer_t staging_buffer;
+        vk::buffer_t staging_buffer;
 
-        vk_buffer_desc_t staging_buffer_desc =
+        vk::buffer_desc_t staging_buffer_desc =
         {
             .size = size_t(gui->get_font_width() * gui->get_font_height() * 4),
-            .usage = vk_buffer_usage_transfer_src,
+            .usage = vk::buffer_usage_transfer_src,
             .on_gpu = false
         };
 
@@ -212,8 +212,8 @@ namespace bpmap
         gui->finalize_font_atlas();
 
 
-        vk_sampler_desc_t font_sampler_desc;
-        vk_sampler_desc_t ro_sampler_desc;
+        vk::sampler_desc_t font_sampler_desc;
+        vk::sampler_desc_t ro_sampler_desc;
         status = sampler_registry->add(font_sampler_desc);
 
         if (status != error_t::success)
@@ -600,12 +600,12 @@ namespace bpmap
 
     error_t gui_renderer_t::create_shaders()
     {
-        darray_t<pair_t<string_t, vk_shader_stage_t>> shaders
+        darray_t<pair_t<string_t, vk::shader_stage_t>> shaders
         {
-            {gui_vs_name, vk_shader_stage_t::vertex},
-            {gui_fs_name, vk_shader_stage_t::fragment},
-            {render_output_vs_name, vk_shader_stage_t::vertex},
-            {render_output_fs_name, vk_shader_stage_t::fragment},
+            {gui_vs_name, vk::shader_stage_t::vertex},
+            {gui_fs_name, vk::shader_stage_t::fragment},
+            {render_output_vs_name, vk::shader_stage_t::vertex},
+            {render_output_fs_name, vk::shader_stage_t::fragment},
         };
 
         return shader_registry->add_from_file(shaders);
@@ -646,10 +646,10 @@ namespace bpmap
     error_t gui_renderer_t::allocate_buffers()
     {
 
-        vk_buffer_desc_t index_buffer_desc =
+        vk::buffer_desc_t index_buffer_desc =
         {
             .size = max_gui_ibuffer_size,
-            .usage = vk_buffer_usage_index_buffer,
+            .usage = vk::buffer_usage_index_buffer,
             .on_gpu = false
         };
 
@@ -659,10 +659,10 @@ namespace bpmap
             return status;
         }
 
-        vk_buffer_desc_t vertex_buffer_desc =
+        vk::buffer_desc_t vertex_buffer_desc =
         {
             .size = max_gui_vbuffer_size,
-            .usage = vk_buffer_usage_index_buffer,
+            .usage = vk::buffer_usage_index_buffer,
             .on_gpu = false
         };
 
@@ -672,10 +672,10 @@ namespace bpmap
             return status;
         }
 
-        vk_buffer_desc_t gui_data_buffer_desc =
+        vk::buffer_desc_t gui_data_buffer_desc =
         {
             .size = sizeof(gui_data),
-            .usage = vk_buffer_usage_uniform_buffer,
+            .usage = vk::buffer_usage_uniform_buffer,
             .on_gpu = false
         };
         status = gui_data_buffer.create(*vulkan, gui_data_buffer_desc);
@@ -837,7 +837,7 @@ namespace bpmap
 
     error_t gui_renderer_t::submit_command_buffer(uint32_t index)
     {
-        vk_fence_t done_rendering;
+        vk::fence_t done_rendering;
         done_rendering.create(*vulkan);
 
         VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};

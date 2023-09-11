@@ -22,16 +22,16 @@
 #include <functional>
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    size_t vk_sampler_desc_hash_t::operator()(const vk_sampler_desc_t& desc) const
+    size_t sampler_desc_hash_t::operator()(const sampler_desc_t& desc) const
     {
         string_view_t sv((const char*)&desc, sizeof(desc));
 
         return std::hash<string_view_t>()(sv);
     }
 
-    error_t vk_sampler_t::create(const vk_device_t& device, const vk_sampler_desc_t& desc)
+    error_t sampler_t::create(const device_t& device, const sampler_desc_t& desc)
     {
         static VkBorderColor color_table[] =
         {
@@ -72,13 +72,13 @@ namespace bpmap
         return error_t::success;
     }
 
-    vk_sampler_t::vk_sampler_t() :
+    sampler_t::sampler_t() :
         sampler(VK_NULL_HANDLE),
         dev(nullptr)
     {
     }
 
-    vk_sampler_t::~vk_sampler_t()
+    sampler_t::~sampler_t()
     {
         if (dev)
         {

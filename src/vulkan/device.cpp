@@ -24,9 +24,9 @@
 #include "vulkan.hpp"
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    error_t vk_device_t::init(window_t& win)
+    error_t device_t::init(window_t& win)
     {
         window = &win;
 
@@ -54,7 +54,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::create_pipeline_layout(
+    error_t device_t::create_pipeline_layout(
                                               VkPipelineLayout& layout,
                                               const VkPipelineLayoutCreateInfo& plci
                                             ) const
@@ -67,12 +67,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vk_device_t::destroy_pipeline_layout(VkPipelineLayout layout) const
+    void device_t::destroy_pipeline_layout(VkPipelineLayout layout) const
     {
         vkDestroyPipelineLayout(device, layout, nullptr);
     }
 
-    error_t vk_device_t::create_descriptor_set_layout(
+    error_t device_t::create_descriptor_set_layout(
                                                     VkDescriptorSetLayout &layout,
                                                     const VkDescriptorSetLayoutCreateInfo &dslci
                                                   ) const
@@ -85,12 +85,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vk_device_t::destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const
+    void device_t::destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const
     {
         vkDestroyDescriptorSetLayout(device, layout, nullptr);
     }
 
-    error_t vk_device_t::create_descriptor_pool(
+    error_t device_t::create_descriptor_pool(
                                               VkDescriptorPool &pool,
                                               const VkDescriptorPoolCreateInfo &dpci
                                             ) const
@@ -103,12 +103,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vk_device_t::destroy_descriptor_pool(VkDescriptorPool pool) const
+    void device_t::destroy_descriptor_pool(VkDescriptorPool pool) const
     {
         vkDestroyDescriptorPool(device, pool, nullptr);
     }
 
-    error_t vk_device_t::allocate_descriptor_set(
+    error_t device_t::allocate_descriptor_set(
                                                VkDescriptorSet& set,
                                                const VkDescriptorSetAllocateInfo &dsai
                                              ) const
@@ -122,7 +122,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::create_graphics_pipeline(
+    error_t device_t::create_graphics_pipeline(
                                                 VkPipeline& pipeline,
                                                 const VkGraphicsPipelineCreateInfo& gpci
                                               ) const
@@ -145,7 +145,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_device_t::create_compute_pipelines(
+    error_t device_t::create_compute_pipelines(
                                                darray_t<VkPipeline>& pipelines,
                                                const darray_t<VkComputePipelineCreateInfo>& cpci
                                              ) const
@@ -168,12 +168,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vk_device_t::destroy_pipeline(VkPipeline pipeline) const
+    void device_t::destroy_pipeline(VkPipeline pipeline) const
     {
         vkDestroyPipeline(device, pipeline, nullptr);
     }
 
-    error_t vk_device_t::create_renederpass(
+    error_t device_t::create_renederpass(
                                           VkRenderPass &render_pass,
                                           const VkRenderPassCreateInfo &rpci
                                         ) const
@@ -186,12 +186,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vk_device_t::destroy_render_pass(VkRenderPass render_pass) const
+    void device_t::destroy_render_pass(VkRenderPass render_pass) const
     {
         vkDestroyRenderPass(device, render_pass, nullptr);
     }
 
-    error_t vk_device_t::create_framebuffers(
+    error_t device_t::create_framebuffers(
                                            darray_t<VkFramebuffer>& framebuffers,
                                            VkFramebufferCreateInfo &fbci
                                          ) const
@@ -216,7 +216,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vk_device_t::destroy_framebuffers(const darray_t<VkFramebuffer> &framebuffers) const
+    void device_t::destroy_framebuffers(const darray_t<VkFramebuffer> &framebuffers) const
     {
         for(auto framebuffer: framebuffers)
         {
@@ -225,7 +225,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::create_instance(const string_t& name)
+    error_t device_t::create_instance(const string_t& name)
     {
         VkApplicationInfo appinfo = {};
         appinfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -267,7 +267,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::find_gpu(VkPhysicalDevice& gpu)
+    error_t device_t::find_gpu(VkPhysicalDevice& gpu)
     {
         std::vector<VkPhysicalDevice> physical_devices;
         std::vector<std::pair<VkPhysicalDevice, uint32_t>> gpus;
@@ -317,7 +317,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::create_logical_device()
+    error_t device_t::create_logical_device()
     {
         if(find_gpu(gpu_device) != error_t::success)
         {
@@ -377,7 +377,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::get_queues()
+    error_t device_t::get_queues()
     {
         vkGetDeviceQueue(
                           device,
@@ -395,7 +395,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::create_command_pool(vk_command_pool_t& command_pool) const
+    error_t device_t::create_command_pool(command_pool_t& command_pool) const
     {
         VkCommandPoolCreateInfo cpci = {};
         cpci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -424,7 +424,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_device_t::create_command_buffers(
+    error_t device_t::create_command_buffers(
                                               VkCommandBuffer* buffers,
                                               const VkCommandBufferAllocateInfo &cbai
                                             ) const
@@ -438,7 +438,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::submit_work(const VkSubmitInfo& submit_info, const vk_fence_t* fence) const
+    error_t device_t::submit_work(const VkSubmitInfo& submit_info, const fence_t* fence) const
     {
         auto fence_handle = fence? fence->get_handle() : VK_NULL_HANDLE;
         if(vkQueueSubmit(queue, 1, &submit_info, fence_handle) != VK_SUCCESS)
@@ -449,7 +449,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_device_t::wait_idle() const
+    error_t device_t::wait_idle() const
     {
         if(vkQueueWaitIdle(queue) != VK_SUCCESS)
         {
@@ -459,12 +459,12 @@ namespace bpmap
         return error_t::success;
     }
 
-    void vk_device_t::update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const
+    void device_t::update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const
     {
         vkUpdateDescriptorSets(device, count, writes, 0, nullptr);
     }
 
-    error_t vk_device_t::get_next_swapchain_image(uint32_t &fb_index, const vk_semaphore_t* semaphore) const
+    error_t device_t::get_next_swapchain_image(uint32_t &fb_index, const semaphore_t* semaphore) const
     {
         vkAcquireNextImageKHR(
                                device,
@@ -478,7 +478,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_device_t::present_on_screen(uint32_t index, const vk_semaphore_t* wait_semaphore) const
+    error_t device_t::present_on_screen(uint32_t index, const semaphore_t* wait_semaphore) const
     {
         auto wait_handle = wait_semaphore->get_handle();
         VkPresentInfoKHR present_info = {};
@@ -499,7 +499,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_device_t::validate_surface_support()
+    error_t device_t::validate_surface_support()
     {
         VkBool32 supported;
 
@@ -516,7 +516,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_device_t::pick_surface_format()
+    error_t device_t::pick_surface_format()
     {
         std::vector<VkSurfaceFormatKHR> formats;
         uint32_t count;
@@ -553,7 +553,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_device_t::pick_present_mode()
+    error_t device_t::pick_present_mode()
     {
         std::vector<VkPresentModeKHR> modes;
         uint32_t count;
@@ -578,7 +578,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::create_surface_and_swapchain()
+    error_t device_t::create_surface_and_swapchain()
     {
         auto status = window->create_surface(instance, surface);
 
@@ -641,7 +641,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::get_swapchain_images()
+    error_t device_t::get_swapchain_images()
     {
 
         uint32_t image_count;
@@ -687,7 +687,7 @@ namespace bpmap
     }
 
 
-    error_t vk_device_t::create_allocator()
+    error_t device_t::create_allocator()
     {
         VmaAllocatorCreateInfo aci = {};
         aci.device = device;
@@ -709,7 +709,7 @@ namespace bpmap
     }
 
 
-    vk_device_t::~vk_device_t()
+    device_t::~device_t()
     {
         vkDeviceWaitIdle(device);
         vkDestroySwapchainKHR(device, swapchain, nullptr);
@@ -720,14 +720,14 @@ namespace bpmap
     }
 
 
-    vk_command_pool_t::vk_command_pool_t()
+    command_pool_t::command_pool_t()
     {
         device = VK_NULL_HANDLE;
         pool = VK_NULL_HANDLE;
     }
 
 
-    vk_command_pool_t::~vk_command_pool_t()
+    command_pool_t::~command_pool_t()
     {
         if(device != VK_NULL_HANDLE)
         {

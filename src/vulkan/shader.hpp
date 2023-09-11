@@ -20,11 +20,11 @@
 #define SHADER_HPP
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    using vk_shader_id_t = size_t;
+    using shader_id_t = size_t;
 
-    enum class vk_shader_stage_t
+    enum class shader_stage_t
     {
         vertex = 0,
         fragment,
@@ -33,27 +33,27 @@ namespace bpmap
         invalid
     };
 
-    class vk_shader_t
+    class shader_t
     {
-        const vk_device_t* dev;
-        vk_shader_stage_t type;
+        const device_t* dev;
+        shader_stage_t type;
         VkShaderModule shader;
 
-        vk_shader_t(const vk_shader_t& other) = delete;
-        vk_shader_t& operator=(const vk_shader_t& other) = delete;
+        shader_t(const shader_t& other) = delete;
+        shader_t& operator=(const shader_t& other) = delete;
 
         public:
 
-        vk_shader_t();
-        ~vk_shader_t();
+        shader_t();
+        ~shader_t();
         VkShaderModule get_handle() const { return shader; }
-        vk_shader_stage_t get_type() const { return type; }
+        shader_stage_t get_type() const { return type; }
 
         error_t create(
-                        const vk_device_t& device,
+                        const device_t& device,
                         const uint32_t* data,
                         size_t size,
-                        vk_shader_stage_t type
+                        shader_stage_t type
                       );
     };
 }

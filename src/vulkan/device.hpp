@@ -25,13 +25,13 @@
 #include <vk_mem_alloc.h>
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    class vk_fence_t;
-    class vk_semaphore_t;
-    class vk_command_pool_t;
+    class fence_t;
+    class semaphore_t;
+    class command_pool_t;
 
-    class vk_device_t
+    class device_t
     {
         VkInstance instance;
         VkDevice device;
@@ -143,14 +143,14 @@ namespace bpmap
 
         void destroy_framebuffers(const darray_t<VkFramebuffer>& framebuffers) const;
 
-        error_t create_command_pool(vk_command_pool_t& pool) const;
+        error_t create_command_pool(command_pool_t& pool) const;
 
         error_t create_command_buffers(
                                         VkCommandBuffer* buffers,
                                         const VkCommandBufferAllocateInfo& cbai
                                       ) const;
 
-        error_t submit_work(const VkSubmitInfo& submit_info, const vk_fence_t* fence) const;
+        error_t submit_work(const VkSubmitInfo& submit_info, const fence_t* fence) const;
         error_t wait_idle() const;
 
         VkFormat get_swapchain_format() const
@@ -160,28 +160,28 @@ namespace bpmap
 
         void update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const;
 
-        error_t get_next_swapchain_image(uint32_t&, const vk_semaphore_t*) const;
-        error_t present_on_screen(uint32_t index, const vk_semaphore_t* wait_semaphore) const;
+        error_t get_next_swapchain_image(uint32_t&, const semaphore_t*) const;
+        error_t present_on_screen(uint32_t index, const semaphore_t* wait_semaphore) const;
 
-        ~vk_device_t();
+        ~device_t();
 
         VkDevice get_device() const { return device; }
         VmaAllocator get_allocator() const { return allocator; }
     };
 
 
-    class vk_command_pool_t
+    class command_pool_t
     {
-        friend class vk_device_t;
+        friend class device_t;
 
         VkDevice device;
 
     public:
         VkCommandPool pool;
 
-        vk_command_pool_t();
-        ~vk_command_pool_t();
+        command_pool_t();
+        ~command_pool_t();
     };
 
 }
-#endif // VULKAN_HPP
+#endif

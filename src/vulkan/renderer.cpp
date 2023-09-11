@@ -8,10 +8,10 @@
 namespace bpmap
 {
     renderer_t::renderer_t(
-                            const vk_device_t& vulkan,
+                            const vk::device_t& vulkan,
                             const scene_t& scene,
-                            shader_registry_t& shr,
-                            sampler_registry_t& sr
+                            vk::shader_registry_t& shr,
+                            vk::sampler_registry_t& sr
                           ) :
         vulkan(&vulkan), scene(&scene), shader_registry(&shr), sampler_registry(&sr)
     {
@@ -212,13 +212,13 @@ namespace bpmap
     error_t renderer_t::create_image()
     {
 
-        vk_image_desc_t desc;
+        vk::image_desc_t desc;
         desc.width = scene->settings.resolution_x;
         desc.height = scene->settings.resolution_y;
-        desc.format = vk_image_format_t::rgba32f;
-        desc.tiling = vk_image_tiling_t::linear;
+        desc.format = vk::image_format_t::rgba32f;
+        desc.tiling = vk::image_tiling_t::linear;
         desc.on_gpu = true;
-        desc.usage = vk_usage_storage | vk_usage_sampled;
+        desc.usage = vk::usage_storage | vk::usage_sampled;
         
         if (render_output.create(*vulkan, desc) != error_t::success)
         {
@@ -318,7 +318,7 @@ namespace bpmap
     {
         return shader_registry->add_from_file(
                                                raytrace_cs_name,
-                                               vk_shader_stage_t::compute
+                                               vk::shader_stage_t::compute
                                              );
     }
 
@@ -399,12 +399,12 @@ namespace bpmap
                                                 scene->lights.size() * sizeof(decltype(scene->lights)::value_type),
                                                 scene->objects.size() *  sizeof(decltype(scene->objects)::value_type)
                                             });
-        vk_buffer_t staging_buffer;
+        vk::buffer_t staging_buffer;
         
-        vk_buffer_desc_t staging_buffer_desc =
+        vk::buffer_desc_t staging_buffer_desc =
         {
             .size = staging_buffer_size,
-            .usage = vk_buffer_usage_transfer_src,
+            .usage = vk::buffer_usage_transfer_src,
             .on_gpu = false
         };
 
@@ -455,10 +455,10 @@ namespace bpmap
             return status;
         }
 
-        vk_buffer_desc_t scene_settings_buffer_desc =
+        vk::buffer_desc_t scene_settings_buffer_desc =
         {
             .size = sizeof(scene_settings_t),
-            .usage = vk_buffer_usage_uniform_buffer,
+            .usage = vk::buffer_usage_uniform_buffer,
             .on_gpu = false
         };
 
@@ -482,15 +482,15 @@ namespace bpmap
 
     template<typename T>
     error_t renderer_t::create_and_upload_buffer(
-                                                  vk_buffer_t& buffer,
+                                                  vk::buffer_t& buffer,
                                                   const T& data,
-                                                  vk_buffer_t& staging_buffer
+                                                  vk::buffer_t& staging_buffer
                                                  )
     {
-        vk_buffer_desc_t desc =
+        vk::buffer_desc_t desc =
         {
             .size = data.size() * sizeof(typename T::value_type),
-            .usage = vk_buffer_usage_transfer_dst | vk_buffer_usage_storage_buffer,
+            .usage = vk::buffer_usage_transfer_dst | vk::buffer_usage_storage_buffer,
             .on_gpu = true
         };
 
@@ -555,7 +555,7 @@ namespace bpmap
         submit_info.signalSemaphoreCount = 0;
         submit_info.waitSemaphoreCount = 0;
 
-        vk_fence_t fence;
+        vk::fence_t fence;
 
         status = fence.create(*vulkan);
 

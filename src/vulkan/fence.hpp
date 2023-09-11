@@ -20,22 +20,22 @@
 #define VULKAN_FENCE_HPP
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    class vk_fence_t
+    class fence_t
     {
-        const vk_device_t* dev;
+        const device_t* dev;
         VkFence fence = VK_NULL_HANDLE;
 
-        vk_fence_t(const vk_fence_t&) = delete;
-        vk_fence_t& operator=(const vk_fence_t&) = delete;
+        fence_t(const fence_t&) = delete;
+        fence_t& operator=(const fence_t&) = delete;
 
     public:
         VkFence get_handle() const { return fence; }
-        error_t create(const vk_device_t& device);
+        error_t create(const device_t& device);
         error_t wait(uint64_t timeout = 0);
-        vk_fence_t();
-        ~vk_fence_t();
+        fence_t();
+        ~fence_t();
     };
 }
 

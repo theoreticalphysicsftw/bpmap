@@ -20,7 +20,7 @@
 #define VULKAN_PSO_HPP
 
 
-namespace bpmap
+namespace bpmap::vk
 {
     struct pso_desc_t
     {

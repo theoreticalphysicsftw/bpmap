@@ -20,9 +20,9 @@
 #define VULKAN_SAMPLER_HPP
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    enum class vk_sampler_border_t
+    enum class sampler_border_t
     {
         transparent_black_float = 0,
         transparent_black_int,
@@ -32,38 +32,38 @@ namespace bpmap
         opaque_white_int,
     };
 
-    struct vk_sampler_desc_t
+    struct sampler_desc_t
     {
         bool_t is_linear = true;
         float_t lod_bias = 0;
         float_t min_lod = 0;
         float_t max_lod = 0;
         uint32_t anisotropy = 16;
-        vk_sampler_border_t border_color = vk_sampler_border_t::opaque_black_float;
+        sampler_border_t border_color = sampler_border_t::opaque_black_float;
 
-        bool_t operator==(const vk_sampler_desc_t&) const = default;
+        bool_t operator==(const sampler_desc_t&) const = default;
     };
 
-    struct vk_sampler_desc_hash_t
+    struct sampler_desc_hash_t
     {
-        size_t operator()(const vk_sampler_desc_t& desc) const;
+        size_t operator()(const sampler_desc_t& desc) const;
     };
 
-    class vk_sampler_t
+    class sampler_t
     {
-        const vk_device_t* dev;
+        const device_t* dev;
         VkSampler sampler;
         
-        vk_sampler_t(const vk_sampler_t& other) = delete;
-        vk_sampler_t& operator=(const vk_sampler_t& other) = delete;
+        sampler_t(const sampler_t& other) = delete;
+        sampler_t& operator=(const sampler_t& other) = delete;
 
         public:
         VkSampler get_handle() const { return sampler; }
         
-        error_t create(const vk_device_t& device, const vk_sampler_desc_t& desc);
+        error_t create(const device_t& device, const sampler_desc_t& desc);
 
-        vk_sampler_t();
-        ~vk_sampler_t();
+        sampler_t();
+        ~sampler_t();
     };
 }
 

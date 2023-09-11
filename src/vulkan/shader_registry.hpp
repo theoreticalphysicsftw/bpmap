@@ -22,32 +22,32 @@
 #include "core/io.hpp"
 #include "vulkan.hpp"
 
-namespace bpmap
+namespace bpmap::vk
 {
     class shader_registry_t
     {
         // We don't want registering new shaders to invalidate
         // others by calling destructors.
-        deque_t<vk_shader_t> shaders; 
-        hash_table_t<string_t, vk_shader_id_t> name_to_id;
+        deque_t<shader_t> shaders; 
+        hash_table_t<string_t, shader_id_t> name_to_id;
 
-        const vk_device_t* dev;
+        const device_t* dev;
 
         public:
-        shader_registry_t(const vk_device_t& device) : dev(&device) {}
+        shader_registry_t(const device_t& device) : dev(&device) {}
 
         error_t add(
                      const string_t& name,
                      const uint32_t* code,
                      size_t size,
-                     vk_shader_stage_t type
+                     shader_stage_t type
                    );
 
-        using desc_array_t = darray_t<pair_t<string_t, vk_shader_stage_t>>;
-        error_t add_from_file(const string_t& name, vk_shader_stage_t type);
+        using desc_array_t = darray_t<pair_t<string_t, shader_stage_t>>;
+        error_t add_from_file(const string_t& name, shader_stage_t type);
         error_t add_from_file(const desc_array_t& descs);
 
-        vk_shader_t& get(const string_t& name);
+        shader_t& get(const string_t& name);
     };
 }
 

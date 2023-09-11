@@ -20,16 +20,16 @@
 #include "shader.hpp"
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    vk_shader_t::vk_shader_t() :
-        type(vk_shader_stage_t::invalid),
+    shader_t::shader_t() :
+        type(shader_stage_t::invalid),
         dev(nullptr),
         shader(VK_NULL_HANDLE)
     {
     }
 
-    vk_shader_t::~vk_shader_t()
+    shader_t::~shader_t()
     {
         if (shader != VK_NULL_HANDLE)
         {
@@ -38,11 +38,11 @@ namespace bpmap
     }
 
 
-    error_t vk_shader_t::create(
-                                  const vk_device_t& device,
+    error_t shader_t::create(
+                                  const device_t& device,
                                   const uint32_t* data,
                                   size_t size,
-                                  vk_shader_stage_t type
+                                  shader_stage_t type
                                 )
     {
         VkShaderModuleCreateInfo smci = {};

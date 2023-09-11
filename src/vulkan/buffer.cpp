@@ -20,9 +20,9 @@
 #include "buffer.hpp"
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    error_t vk_buffer_t::map(void** data)
+    error_t buffer_t::map(void** data)
     {
         if(vmaMapMemory(dev->get_allocator(), allocation, data) != VK_SUCCESS)
         {
@@ -33,13 +33,13 @@ namespace bpmap
     }
 
 
-    void vk_buffer_t::unmap()
+    void buffer_t::unmap()
     {
         vmaUnmapMemory(dev->get_allocator(), allocation);
     }
 
 
-    vk_buffer_t::vk_buffer_t()
+    buffer_t::buffer_t()
     {
         dev = nullptr;
         allocation = VK_NULL_HANDLE;
@@ -48,7 +48,7 @@ namespace bpmap
     }
 
 
-    vk_buffer_t::~vk_buffer_t()
+    buffer_t::~buffer_t()
     {
         if(dev)
         {
@@ -57,7 +57,7 @@ namespace bpmap
     }
 
 
-    error_t vk_buffer_t::create(const vk_device_t& device, const vk_buffer_desc_t& desc)
+    error_t buffer_t::create(const device_t& device, const buffer_desc_t& desc)
     {
 
         VkBufferCreateInfo bci = {};

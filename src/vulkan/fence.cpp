@@ -20,16 +20,16 @@
 #include "fence.hpp"
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    vk_fence_t::vk_fence_t()
+    fence_t::fence_t()
     {
         dev = nullptr;
         fence = VK_NULL_HANDLE;
     }
 
 
-    vk_fence_t::~vk_fence_t()
+    fence_t::~fence_t()
     {
         if(dev)
         {
@@ -37,7 +37,7 @@ namespace bpmap
         }
     }
 
-    error_t vk_fence_t::create(const vk_device_t& device)
+    error_t fence_t::create(const device_t& device)
     {
         VkFenceCreateInfo fci;
         fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -54,7 +54,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t vk_fence_t::wait(uint64_t timeout)
+    error_t fence_t::wait(uint64_t timeout)
     {
         auto status = vkWaitForFences(dev->get_device(), 1, &fence, VK_TRUE, timeout);
 

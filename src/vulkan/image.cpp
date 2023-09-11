@@ -19,9 +19,9 @@
 #include "vulkan.hpp"
 #include "image.hpp"
 
-namespace bpmap
+namespace bpmap::vk
 {
-    VkFormat to_vk_format(vk_image_format_t format)
+    VkFormat to_format(image_format_t format)
     {
         static const VkFormat format_table[] =
         {
@@ -33,7 +33,7 @@ namespace bpmap
     }
 
 
-    VkImageTiling to_vk_tiling(vk_image_tiling_t tiling)
+    VkImageTiling to_tiling(image_tiling_t tiling)
     {
         static const VkImageTiling tiling_table[] =
         {
@@ -45,9 +45,9 @@ namespace bpmap
     }
 
 
-    error_t vk_image_t::create(
-                                const vk_device_t& device,
-                                const vk_image_desc_t& desc
+    error_t image_t::create(
+                                const device_t& device,
+                                const image_desc_t& desc
                               )
     {
         info = desc;
@@ -59,9 +59,9 @@ namespace bpmap
         ici.arrayLayers = desc.layers;
         ici.mipLevels = desc.mips;
         ici.samples = VkSampleCountFlagBits(desc.samples);
-        ici.format = to_vk_format(desc.format);
+        ici.format = to_format(desc.format);
         ici.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        ici.tiling = to_vk_tiling(desc.tiling);
+        ici.tiling = to_tiling(desc.tiling);
         ici.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         ici.usage = desc.usage;
         ici.pQueueFamilyIndices = nullptr;
@@ -105,7 +105,7 @@ namespace bpmap
         ivci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         ivci.pNext = nullptr;
         ivci.flags = 0;
-        ivci.format = to_vk_format(desc.format);
+        ivci.format = to_format(desc.format);
         ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ivci.subresourceRange = isr;
         ivci.image = image;
@@ -126,7 +126,7 @@ namespace bpmap
     }
 
 
-    vk_image_t::vk_image_t()
+    image_t::image_t()
     {
         dev = nullptr;
         allocation = VK_NULL_HANDLE;
@@ -136,7 +136,7 @@ namespace bpmap
     }
 
 
-    vk_image_t::~vk_image_t()
+    image_t::~image_t()
     {
         if(!wrapped && image != VK_NULL_HANDLE)
         {

@@ -39,32 +39,32 @@ namespace bpmap
         VkDescriptorSet render_output_descriptor_set;
         darray_t<VkFramebuffer> framebuffers;
 
-        vk_command_pool_t command_pool;
+        vk::command_pool_t command_pool;
         darray_t<VkCommandBuffer> command_buffers;
 
-        vk_semaphore_t image_available;
-        vk_semaphore_t render_finished;
+        vk::semaphore_t image_available;
+        vk::semaphore_t render_finished;
 
-        vk_shader_t render_output_vertex_shader;
-        vk_shader_t render_output_fragment_shader;
-        vk_shader_t vertex_shader;
-        vk_shader_t fragment_shader;
+        vk::shader_t render_output_vertex_shader;
+        vk::shader_t render_output_fragment_shader;
+        vk::shader_t vertex_shader;
+        vk::shader_t fragment_shader;
 
-        vk_image_t font_image;
-        const vk_sampler_t* font_sampler;
-        const vk_sampler_t* ro_sampler;
+        vk::image_t font_image;
+        const vk::sampler_t* font_sampler;
+        const vk::sampler_t* ro_sampler;
 
-        vk_buffer_t vertex_buffer;
-        vk_buffer_t index_buffer;
-        vk_buffer_t gui_data_buffer;
+        vk::buffer_t vertex_buffer;
+        vk::buffer_t index_buffer;
+        vk::buffer_t gui_data_buffer;
 
         gui_data_t gui_data;
 
         gui_t* gui;
-        const vk_device_t* vulkan;
+        const vk::device_t* vulkan;
         const renderer_t* renderer;
-        shader_registry_t* shader_registry;
-        sampler_registry_t* sampler_registry;
+        vk::shader_registry_t* shader_registry;
+        vk::sampler_registry_t* sampler_registry;
 
         error_t setup_font_texture();
         error_t create_descriptor_sets_layout();
@@ -98,9 +98,9 @@ namespace bpmap
 
         gui_renderer_t(
                         gui_t& gui, 
-                        const vk_device_t& vk,
-                        shader_registry_t& shader_registry,
-                        sampler_registry_t& sampler_registry,
+                        const vk::device_t& vk,
+                        vk::shader_registry_t& shader_registry,
+                        vk::sampler_registry_t& sampler_registry,
                         const renderer_t& r
                       );
 

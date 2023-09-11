@@ -19,9 +19,9 @@
 #include "sampler_registry.hpp"
 
 
-namespace bpmap
+namespace bpmap::vk
 {
-    error_t sampler_registry_t::add(const vk_sampler_desc_t& desc)
+    error_t sampler_registry_t::add(const sampler_desc_t& desc)
     {
         if (desc_to_id.find(desc) != desc_to_id.end())
         {
@@ -48,7 +48,7 @@ namespace bpmap
     }
     
 
-    vk_sampler_t& sampler_registry_t::get(const vk_sampler_desc_t& desc)
+    sampler_t& sampler_registry_t::get(const sampler_desc_t& desc)
     {
         DEBUG_VERIFY(desc_to_id.find(desc) != desc_to_id.end());
         return samplers[desc_to_id[desc]];

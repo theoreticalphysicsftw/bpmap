@@ -19,22 +19,22 @@
 #ifndef VULKAN_SEMAPHORE_HPP
 #define VULKAN_SEMAPHORE_HPP
 
-namespace bpmap
+namespace bpmap::vk
 {
-    class vk_semaphore_t
+    class semaphore_t
     {
-        const vk_device_t* dev;
+        const device_t* dev;
         VkSemaphore semaphore;
 
-        vk_semaphore_t(const vk_semaphore_t&) = delete;
-        vk_semaphore_t& operator=(const vk_semaphore_t) = delete;
+        semaphore_t(const semaphore_t&) = delete;
+        semaphore_t& operator=(const semaphore_t) = delete;
 
     public:
         VkSemaphore get_handle() const { return semaphore; }
-        error_t create(const vk_device_t& device);
+        error_t create(const device_t& device);
 
-        vk_semaphore_t();
-        ~vk_semaphore_t();
+        semaphore_t();
+        ~semaphore_t();
     };
 }
 

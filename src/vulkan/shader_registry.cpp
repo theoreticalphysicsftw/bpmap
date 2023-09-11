@@ -19,13 +19,13 @@
 #include "shader_registry.hpp"
 
 
-namespace bpmap
+namespace bpmap::vk
 {
     error_t shader_registry_t::add(
                                     const string_t& name,
                                     const uint32_t* code,
                                     size_t size,
-                                    vk_shader_stage_t type
+                                    shader_stage_t type
                                   )
     {
         if (name_to_id.find(name) != name_to_id.end())
@@ -33,7 +33,7 @@ namespace bpmap
             return error_t::success;
         }
 
-        vk_shader_id_t id = shaders.size();
+        shader_id_t id = shaders.size();
 
         shaders.emplace_back();
         
@@ -52,7 +52,7 @@ namespace bpmap
         return error_t::success;
     }
 
-    error_t shader_registry_t::add_from_file(const string_t& name, vk_shader_stage_t type)
+    error_t shader_registry_t::add_from_file(const string_t& name, shader_stage_t type)
     {
         darray_t<uint8_t> shader_data;
 
@@ -81,7 +81,7 @@ namespace bpmap
     }
 
 
-    vk_shader_t& shader_registry_t::get(const string_t& name)
+    shader_t& shader_registry_t::get(const string_t& name)
     {
         DEBUG_VERIFY(name_to_id.find(name) != name_to_id.end());
         return shaders[name_to_id[name]];

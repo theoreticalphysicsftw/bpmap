@@ -32,14 +32,14 @@ namespace bpmap
 
     class application_t
     {
-        vk_device_t vulkan;
+        vk::device_t vulkan;
         renderer_t renderer;
         gui_renderer_t gui_renderer;
         window_t window;
         gui_t gui;
         scene_t scene;
-        shader_registry_t shader_registry;
-        sampler_registry_t sampler_registry;
+        vk::shader_registry_t shader_registry;
+        vk::sampler_registry_t sampler_registry;
 
     public:
 
