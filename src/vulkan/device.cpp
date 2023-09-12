@@ -229,7 +229,7 @@ namespace bpmap::vk
     {
         VkApplicationInfo appinfo = {};
         appinfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appinfo.apiVersion = VK_API_VERSION_1_0;
+        appinfo.apiVersion = VK_API_VERSION_1_2;
         appinfo.applicationVersion = 1;
         appinfo.pApplicationName = name.c_str();
         appinfo.engineVersion = 1;
