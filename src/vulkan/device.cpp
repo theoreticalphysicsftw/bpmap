@@ -350,14 +350,24 @@ namespace bpmap::vk
 
         std::vector<const char*> extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-        VkPhysicalDeviceFeatures features;
-        memset(&features, 0, sizeof(features));
+        VkPhysicalDeviceFeatures features = {};
         features.samplerAnisotropy = VK_TRUE;
+
+        VkPhysicalDeviceBufferDeviceAddressFeatures address_features = {};
+        address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+        address_features.pNext = nullptr;
+        address_features.bufferDeviceAddress = VK_TRUE;
+
+        VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {};
+        indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+        indexing_features.pNext = &address_features;
+        indexing_features.runtimeDescriptorArray = VK_TRUE;
+        indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
 
         VkDeviceCreateInfo dci = {};
         dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        dci.pNext = &indexing_features;
         dci.flags = 0;
-        dci.pNext = nullptr;
         dci.enabledLayerCount = 0;
         dci.ppEnabledLayerNames = nullptr;
         dci.enabledExtensionCount = extensions.size();
