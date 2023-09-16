@@ -45,8 +45,8 @@ file(
     )
 
 include_directories("src")
-include_directories("third_party")
-include_directories("third_party/glfw3/include/GLFW")
+include_directories("external")
+include_directories("external/glfw3/include/GLFW")
 include_directories("src/core")
 
 set(BUILD_SHARED_LIBS "NO")
@@ -54,8 +54,8 @@ set(GLFW_BUILD_EXAMPLES "NO")
 set(GLFW_BUILD_TESTS "NO")
 set(GLFW_BUILD_DOCS "NO")
 set(GLFW_VULKAN_STATIC "NO")
-add_subdirectory("third_party/glfw3")
-link_directories("third_party/glfw3")
+add_subdirectory("external/glfw3")
+link_directories("external/glfw3")
 
 file(
       GLOB
