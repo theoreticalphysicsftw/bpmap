@@ -19,7 +19,8 @@
 cmake_minimum_required(VERSION 3.5)
 
 project(bpmap)
-set(CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if((DEFINED CMAKE_BUILD_TYPE))
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
