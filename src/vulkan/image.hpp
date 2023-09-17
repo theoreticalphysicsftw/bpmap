@@ -59,8 +59,9 @@ namespace bpmap::vk
         VmaAllocation allocation;
         VkImage image;
         VkImageView view;
-        
         image_desc_t info;
+
+        uint32_t slot;
 
         image_t(const image_t&) = delete;
         image_t& operator=(const image_t&) = delete;
@@ -73,6 +74,9 @@ namespace bpmap::vk
 
         VkImage get_image() const { return image; }
         VkImageView get_view() const { return view; }
+        const image_desc_t& get_info() const { return info; }
+        uint32_t get_slot() const { return slot; }
+
         image_t();
         ~image_t();
     };

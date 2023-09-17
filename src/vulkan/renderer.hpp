@@ -31,10 +31,6 @@ namespace bpmap
         darray_t<VkPipeline> compute_pipelines;
         darray_t<VkPipelineLayout> compute_pipeline_layouts;
 
-        VkDescriptorSetLayout descriptor_set_layout;
-        VkDescriptorPool descriptor_pool;
-        VkDescriptorSet descriptor_set;
-
         VkCommandBuffer command_buffer;
         vk::command_pool_t command_pool;
 
@@ -53,11 +49,7 @@ namespace bpmap
 
         error_t create_shaders();
 
-        error_t create_descriptor_sets_layout();
-        error_t create_descriptor_sets();
         error_t create_buffers();
-        error_t update_descriptor_sets();
-        error_t create_descriptor_pools();
         error_t create_compute_pipeline_layouts();
         error_t create_compute_pipelines();
         error_t create_command_pool();

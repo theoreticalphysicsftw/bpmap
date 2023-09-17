@@ -19,6 +19,9 @@
 #ifndef VULKAN_HPP
 #define VULKAN_HPP
 
+#include <common.hpp>
+#include <error.hpp>
+
 #include "device.hpp"
 #include "sampler.hpp"
 #include "image.hpp"

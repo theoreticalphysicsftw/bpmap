@@ -44,6 +44,7 @@ namespace bpmap::vk
         dev = nullptr;
         allocation = VK_NULL_HANDLE;
         buffer = VK_NULL_HANDLE;
+        slot = INVALID_SLOT;
         size = 0;
     }
 
@@ -95,6 +96,11 @@ namespace bpmap::vk
 
         dev = &device;
         size = bci.size;
+
+        if (!desc.dont_bind)
+        {
+            slot = device.bind(this);
+        }
 
         return error_t::success;
     }

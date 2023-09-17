@@ -18,8 +18,15 @@
 
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_GOOGLE_include_directive : enable
 
-layout(binding = 1) uniform sampler2D rendered_image;
+#include "../vulkan/vk.glslh"
+
+layout(push_constant) uniform push_range
+{
+    uint rendered_image_id;
+    uint sampler_id;
+};
 
 layout(location = 0) in vec4 fragment_data;
 layout(location = 1) in vec2 fragment_uv;
@@ -28,7 +35,7 @@ layout(location = 0) out vec4 output_color;
 
 void main()
 {
-    vec4 image_color = texture(rendered_image, fragment_uv);
+    vec4 image_color = VK_SAMPLE_2D(rendered_image_id, sampler_id, fragment_uv);
     float a = fragment_data.x;
     float gamma = fragment_data.y;
     output_color = vec4(a * pow(image_color.xyz, vec3(gamma, gamma, gamma)), 1.0);

@@ -18,15 +18,19 @@
 
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_GOOGLE_include_directive : enable
+
+#include "../vulkan/vk.glslh"
 
 out gl_PerVertex
 {
     vec4 gl_Position;
 };
 
-layout(binding = 0) uniform gui_data
+layout(push_constant) uniform gui_data
 {
-    mat4 projection;
+    uint render_output_id;
+    uint sampler_id;
     float a;
     float gamma;
 };

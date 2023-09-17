@@ -1,0 +1,73 @@
+// Copyright 2018-2023 Mihail Mladenov
+//
+// This file is part of bpmap.
+//
+// bpmap is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// bpmap is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with bpmap.  If not, see <http://www.gnu.org/licenses/>.
+
+
+// This is shared between C++ and shader code
+#ifndef VK_GLSLH
+#define VK_GLSLH
+
+#define BINDLESS_SAMPLED_IMAGES_SLOT 0
+#define BINDLESS_STORAGE_IMAGES_SLOT 1
+#define BINDLESS_SAMPLERS_SLOT 2
+#define BINDLESS_BUFFERS_SLOT 3
+#define BINDLESS_HANDLE_BUFFER_SLOT 4
+
+
+// Shader specific
+#ifndef __cplusplus
+
+// #extension GL_EXT_buffer_reference : enable
+// #extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_EXT_shader_image_load_formatted : require
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_nonuniform_qualifier : require
+
+layout(set = 0, binding = BINDLESS_SAMPLERS_SLOT) uniform sampler sampler_table[];
+
+#define VK_IMAGE_LAYOUT
+
+#define VK_STORAGE_IMAGE_LAYOUT layout(set = 0, binding = BINDLESS_STORAGE_IMAGES_SLOT)
+#define VK_SAMPLED_IMAGE_LAYOUT layout(set = 0, binding = BINDLESS_SAMPLED_IMAGES_SLOT)
+
+#define _VK_DEFINE_IMAGE_TYPE(DIMENSION) \
+    VK_STORAGE_IMAGE_LAYOUT uniform image##DIMENSION vk_image##DIMENSION##_table[]; \
+    VK_STORAGE_IMAGE_LAYOUT uniform iimage##DIMENSION vk_iimage##DIMENSION##_table[]; \
+    VK_STORAGE_IMAGE_LAYOUT uniform uimage##DIMENSION vk_uimage##DIMENSION##_table[]; \
+    VK_SAMPLED_IMAGE_LAYOUT uniform texture##DIMENSION vk_texture##DIMENSION##_table[]; \
+    VK_SAMPLED_IMAGE_LAYOUT uniform itexture##DIMENSION vk_itexture##DIMENSION##_table[]; \
+    VK_SAMPLED_IMAGE_LAYOUT uniform utexture##DIMENSION vk_utexture##DIMENSION##_table[]; \
+
+_VK_DEFINE_IMAGE_TYPE(1D)
+_VK_DEFINE_IMAGE_TYPE(2D)
+_VK_DEFINE_IMAGE_TYPE(3D)
+
+#define VK_DEFINE_BUFFER_TYPE(T) \
+    layout(set = 0, binding = BINDLESS_BUFFERS_SLOT, scalar) \
+    buffer Layout_##T { T data[]; } vk_buffer_table_##T[];
+
+#define VK_BUFFER(T, INDEX) vk_buffer_table_##T[INDEX].data
+
+#define VK_SAMPLE_2D(IMAGE_INDEX, SAMPLER_INDEX, CORDS) \
+    texture(sampler2D(vk_texture2D_table[IMAGE_INDEX], sampler_table[SAMPLER_INDEX]), CORDS)
+
+#define VK_IMAGE_2D(IMAGE_INDEX) \
+    vk_image2D_table[IMAGE_INDEX]
+
+#endif
+
+#endif

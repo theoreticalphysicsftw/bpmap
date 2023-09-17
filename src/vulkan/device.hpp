@@ -23,6 +23,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <bitmap_tree.hpp>
 
 
 namespace bpmap::vk
@@ -30,10 +31,24 @@ namespace bpmap::vk
     class fence_t;
     class semaphore_t;
     class command_pool_t;
+    class image_t;
+    class buffer_t;
+    class sampler_t;
+
+    struct device_desc_t
+    {
+        uint32_t max_bindless_buffers = 4096 * 64;
+        uint32_t max_bindless_images = 4096 * 64;
+        uint32_t max_bindless_samplers = 4096 * 64;
+        uint32_t max_push_constants = 32;
+    };
+
+    static constexpr uint32_t INVALID_SLOT = ~uint32_t(0);
 
     class device_t
     {
         VkInstance instance;
+        VkPhysicalDevice gpu_device;
         VkDevice device;
 
         VmaAllocator allocator;
@@ -47,8 +62,6 @@ namespace bpmap::vk
         VkPresentModeKHR swapchain_present_mode;
 
         VkQueue queue;
-
-        VkPhysicalDevice gpu_device;
         uint32_t queue_index;
 
         window_t* window;
@@ -57,26 +70,7 @@ namespace bpmap::vk
         error_t find_gpu(VkPhysicalDevice&);
 
         template <typename Lambda>
-        error_t find_queue(VkPhysicalDevice pd, uint32_t& queue_family, Lambda select)
-        {
-            std::vector<VkQueueFamilyProperties> properties;
-            uint32_t count;
-
-            vkGetPhysicalDeviceQueueFamilyProperties(pd, &count, nullptr);
-            properties.resize(count);
-            vkGetPhysicalDeviceQueueFamilyProperties(pd, &count, properties.data());
-
-            for(uint32_t i = 0; i < count; ++i)
-            {
-                if(select(properties[i], i))
-                {
-                    queue_family = i;
-                    return error_t::success;
-                }
-            }
-
-            return error_t::get_queue_fail;
-        }
+        error_t find_queue(VkPhysicalDevice pd, uint32_t& queue_family, Lambda select);
 
         error_t create_logical_device();
         error_t get_queues();
@@ -87,9 +81,29 @@ namespace bpmap::vk
         error_t get_swapchain_images();
         error_t create_allocator();
 
+        // Bindless system;
+        mutable bmt::tree_t<uint64_t> image_slots;
+        mutable bmt::tree_t<uint64_t> sampler_slots;
+        mutable bmt::tree_t<uint64_t> buffer_slots;
+        VkDescriptorPool bindless_pool;
+        VkDescriptorSetLayout bindless_layout;
+        VkDescriptorSet bindless_set;
+        VkPushConstantRange push_range;
+
+        error_t init_bindless_system(const device_desc_t& desc);
+        void destroy_bindless_system();
+
     public:
 
-        error_t init(window_t&);
+        VkDescriptorSetLayout get_bindless_layout() const { return bindless_layout; }
+        VkDescriptorSet get_bindless_set() const { return bindless_set; }
+        const VkPushConstantRange& get_push_range() const { return push_range; }
+
+        error_t init(window_t&, const device_desc_t& desc = device_desc_t());
+
+        uint32_t bind(const image_t* image) const;
+        uint32_t bind(const buffer_t* buffer) const;
+        uint32_t bind(const sampler_t* sampler) const;
 
         error_t create_pipeline_layout(
                                         VkPipelineLayout& layout,
@@ -98,24 +112,6 @@ namespace bpmap::vk
 
         void destroy_pipeline_layout(VkPipelineLayout layout) const;
 
-        error_t create_descriptor_set_layout(
-                                              VkDescriptorSetLayout& layout,
-                                              const VkDescriptorSetLayoutCreateInfo& dslci
-                                            ) const;
-
-        void destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const;
-
-        error_t create_descriptor_pool(
-                                        VkDescriptorPool& pool,
-                                        const VkDescriptorPoolCreateInfo& dpci
-                                      ) const;
-
-        void destroy_descriptor_pool(VkDescriptorPool pool) const;
-
-        error_t allocate_descriptor_set(
-                                         VkDescriptorSet& set,
-                                         const VkDescriptorSetAllocateInfo& dsai
-                                       ) const;
 
         error_t create_graphics_pipeline(
                                           VkPipeline& pipeline,
@@ -158,8 +154,6 @@ namespace bpmap::vk
             return swapchain_image_format;
         }
 
-        void update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const;
-
         error_t get_next_swapchain_image(uint32_t&, const semaphore_t*) const;
         error_t present_on_screen(uint32_t index, const semaphore_t* wait_semaphore) const;
 
@@ -169,6 +163,27 @@ namespace bpmap::vk
         VmaAllocator get_allocator() const { return allocator; }
     };
 
+    template <typename Lambda>
+    error_t device_t::find_queue(VkPhysicalDevice pd, uint32_t& queue_family, Lambda select)
+    {
+        std::vector<VkQueueFamilyProperties> properties;
+        uint32_t count;
+
+        vkGetPhysicalDeviceQueueFamilyProperties(pd, &count, nullptr);
+        properties.resize(count);
+        vkGetPhysicalDeviceQueueFamilyProperties(pd, &count, properties.data());
+
+        for(uint32_t i = 0; i < count; ++i)
+        {
+            if(select(properties[i], i))
+            {
+                queue_family = i;
+                return error_t::success;
+            }
+        }
+
+        return error_t::get_queue_fail;
+    }
 
     class command_pool_t
     {

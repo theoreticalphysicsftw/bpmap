@@ -28,29 +28,6 @@
 #include "brdf.glslh"
 
 
-struct camera_t
-{
-    vec3 up;
-    float fov;
-    vec3 left;
-    float aspect_ratio;
-    vec3 front;
-    float near;
-    vec3 origin;
-    float far;
-};
-
-
-layout (std140, binding = 0) uniform scene_settings_t
-{
-    camera_t camera;
-    uint samples_per_pixel;
-    uint light_samples;
-    uint max_reflection_bounces;
-} scene_settings;
-
-
-layout (set = 0, binding = 1, rgba32f) uniform writeonly image2D render_output;
 layout (local_size_x = 8, local_size_y = 8) in;
 
 
@@ -65,9 +42,9 @@ vec3 sample_light(light_t light, uint i, float inv_samples)
 
 vec3 brdf(vec3 out_dir, vec3 in_dir, intersection_t intersection)
 {
-    vec3 base_color = materials[intersection.material_id].base_color;
-    float roughness = materials[intersection.material_id].roughness;
-    float metallic = materials[intersection.material_id].metallic;
+    vec3 base_color = VK_BUFFER(material_t, materials_id)[intersection.material_id].base_color;
+    float roughness = VK_BUFFER(material_t, materials_id)[intersection.material_id].roughness;
+    float metallic = VK_BUFFER(material_t, materials_id)[intersection.material_id].metallic;
 
     vec3 half_vec = normalize(out_dir + in_dir);
 
@@ -101,14 +78,14 @@ intersection_t intersect_geometry(ray_t ray)
     intersection_t intersection;
     intersection.t = INFINITY;
 
-    for(uint i = 0; i < triangles.length(); ++i)
+    for(uint i = 0; i < VK_BUFFER(triangle_idx_t, triangles_id).length(); ++i)
     {
         intersection_t current_intersection;
         // Apparently have to use temporaries in order to avoid the
         // "OpFunctionCall Argument <id> '520's type does not match Function <id> '24's parameter type"
         // bug.
         // https://github.com/KhronosGroup/glslang/issues/988
-        triangle_idx_t triangle = triangles[i];
+        triangle_idx_t triangle = VK_BUFFER(triangle_idx_t, triangles_id)[i];
 
         if(intersect_triangle(ray, triangle, current_intersection))
         {
@@ -127,21 +104,21 @@ vec3 direct_lighting(ray_t ray)
 {
     vec3 output_color = vec3(0.0, 0.0, 0.0);
 
-    uint light_samples = scene_settings.light_samples;
+    uint light_samples = VK_BUFFER(scene_settings_t, scene_settings_id)[0].light_samples;
     float inv_light_samples = 1.0 / light_samples;
 
     intersection_t intersection = intersect_geometry(ray);
 
     if(intersection.t < INFINITY && intersection.t > 0)
     {
-        for(uint i = 0; i < lights.length(); ++i)
+        for(uint i = 0; i < VK_BUFFER(light_t, lights_id).length(); ++i)
         {
             vec3 intersection_point = ray.origin + intersection.t * ray.direction;
 
-            if(dot(intersection_point - lights[i].point, lights[i].normal) > 0)
+            if(dot(intersection_point - VK_BUFFER(light_t, lights_id)[i].point, VK_BUFFER(light_t, lights_id)[i].normal) > 0)
             {
                 // Trying to avoid this https://github.com/KhronosGroup/glslang/issues/988
-                light_t light = lights[i];
+                light_t light = VK_BUFFER(light_t, lights_id)[i];
 
                 float sample_power = light.power / light_samples;
 
@@ -164,7 +141,7 @@ vec3 direct_lighting(ray_t ray)
                                                 -ray.direction,
                                                 -shadow_ray.direction,
                                                 intersection,
-                                                lights[i].color,
+                                                VK_BUFFER(light_t, lights_id)[i].color,
                                                 sample_power /
                                                 (light_distance * light_distance) *
                                                 dot(shadow_ray.direction, light.normal)
@@ -191,14 +168,14 @@ void main()
 {
     vec3 output_color = vec3(0.0, 0.0, 0.0);
 
-    camera_t camera = scene_settings.camera;
+    camera_t camera = VK_BUFFER(scene_settings_t, scene_settings_id)[0].camera;
 
-    uint samples_per_pixel = scene_settings.samples_per_pixel;
+    uint samples_per_pixel = VK_BUFFER(scene_settings_t, scene_settings_id)[0].samples_per_pixel;
     float inv_samples_per_pixel = 1.0 / samples_per_pixel;
 
     float fov_scale = 1.0 / tan(radians(camera.fov) / 2.0);
 
-    vec2 image_scale = 1.0 / imageSize(render_output);
+    vec2 image_scale = 1.0 / imageSize(VK_IMAGE_2D(render_output_id));
     vec2 camera_scale = fov_scale * vec2(camera.aspect_ratio, 1.0);
 
     vec2 raster_coords = gl_GlobalInvocationID.xy * image_scale;
@@ -228,5 +205,5 @@ void main()
 
     output_color /= samples_per_pixel;
 
-    imageStore(render_output, ivec2(gl_GlobalInvocationID.xy), vec4(output_color, 1.0));
+    imageStore(VK_IMAGE_2D(render_output_id), ivec2(gl_GlobalInvocationID.xy), vec4(output_color, 1.0));
 }

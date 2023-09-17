@@ -69,12 +69,14 @@ namespace bpmap::vk
 
         dev = &device;
 
+        slot = device.bind(this);
         return error_t::success;
     }
 
     sampler_t::sampler_t() :
+        dev(nullptr),
         sampler(VK_NULL_HANDLE),
-        dev(nullptr)
+        slot(INVALID_SLOT)
     {
     }
 

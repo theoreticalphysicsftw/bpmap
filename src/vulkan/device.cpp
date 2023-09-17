@@ -23,10 +23,11 @@
 #include "device.hpp"
 #include "vulkan.hpp"
 
+#include "vk.glslh"
 
 namespace bpmap::vk
 {
-    error_t device_t::init(window_t& win)
+    error_t device_t::init(window_t& win, const device_desc_t& desc)
     {
         window = &win;
 
@@ -49,6 +50,10 @@ namespace bpmap::vk
         {
            error = create_allocator();
         }
+        if(error == error_t::success)
+        {
+           error = init_bindless_system(desc);
+        }
 
        return error;
     }
@@ -70,55 +75,6 @@ namespace bpmap::vk
     void device_t::destroy_pipeline_layout(VkPipelineLayout layout) const
     {
         vkDestroyPipelineLayout(device, layout, nullptr);
-    }
-
-    error_t device_t::create_descriptor_set_layout(
-                                                    VkDescriptorSetLayout &layout,
-                                                    const VkDescriptorSetLayoutCreateInfo &dslci
-                                                  ) const
-    {
-        if(vkCreateDescriptorSetLayout(device, &dslci, nullptr, &layout) != VK_SUCCESS)
-        {
-            return error_t::descriptor_set_layout_creation_fail;
-        }
-
-        return error_t::success;
-    }
-
-    void device_t::destroy_descriptor_set_layout(VkDescriptorSetLayout layout) const
-    {
-        vkDestroyDescriptorSetLayout(device, layout, nullptr);
-    }
-
-    error_t device_t::create_descriptor_pool(
-                                              VkDescriptorPool &pool,
-                                              const VkDescriptorPoolCreateInfo &dpci
-                                            ) const
-    {
-        if(vkCreateDescriptorPool(device, &dpci, nullptr, &pool) != VK_SUCCESS)
-        {
-            return error_t::descriptor_pool_creation_fail;
-        }
-
-        return error_t::success;
-    }
-
-    void device_t::destroy_descriptor_pool(VkDescriptorPool pool) const
-    {
-        vkDestroyDescriptorPool(device, pool, nullptr);
-    }
-
-    error_t device_t::allocate_descriptor_set(
-                                               VkDescriptorSet& set,
-                                               const VkDescriptorSetAllocateInfo &dsai
-                                             ) const
-    {
-        if(vkAllocateDescriptorSets(device, &dsai, &set) != VK_SUCCESS)
-        {
-            return error_t::descriptor_set_allocation_fail;
-        }
-
-        return error_t::success;
     }
 
 
@@ -352,6 +308,11 @@ namespace bpmap::vk
 
         VkPhysicalDeviceFeatures features = {};
         features.samplerAnisotropy = VK_TRUE;
+        features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+        features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+        features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
+        features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
+        features.shaderStorageImageReadWithoutFormat = VK_TRUE;
 
         VkPhysicalDeviceBufferDeviceAddressFeatures address_features = {};
         address_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
@@ -363,6 +324,9 @@ namespace bpmap::vk
         indexing_features.pNext = &address_features;
         indexing_features.runtimeDescriptorArray = VK_TRUE;
         indexing_features.descriptorBindingPartiallyBound = VK_TRUE;
+        indexing_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+        indexing_features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+        indexing_features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
 
         VkDeviceCreateInfo dci = {};
         dci.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -467,11 +431,6 @@ namespace bpmap::vk
         }
 
         return error_t::success;
-    }
-
-    void device_t::update_descriptor_sets(const VkWriteDescriptorSet* writes, uint32_t count) const
-    {
-        vkUpdateDescriptorSets(device, count, writes, 0, nullptr);
     }
 
     error_t device_t::get_next_swapchain_image(uint32_t &fb_index, const semaphore_t* semaphore) const
@@ -722,6 +681,9 @@ namespace bpmap::vk
     device_t::~device_t()
     {
         vkDeviceWaitIdle(device);
+
+        destroy_bindless_system();
+
         vkDestroySwapchainKHR(device, swapchain, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
         vmaDestroyAllocator(allocator);
@@ -743,6 +705,218 @@ namespace bpmap::vk
         {
             vkDestroyCommandPool(device, pool, nullptr);
         }
+    }
+
+    error_t device_t::init_bindless_system(const device_desc_t& desc)
+    {
+        push_range.stageFlags = VK_SHADER_STAGE_ALL;
+        push_range.offset = 0;
+        push_range.size = desc.max_push_constants * 4;
+
+        VkDescriptorPoolSize pool_sizes[5] = {};
+
+        pool_sizes[0].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        pool_sizes[0].descriptorCount = desc.max_bindless_images;
+        pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        pool_sizes[1].descriptorCount = desc.max_bindless_images;
+        pool_sizes[2].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        pool_sizes[2].descriptorCount = desc.max_bindless_samplers;
+        pool_sizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        pool_sizes[3].descriptorCount = desc.max_bindless_buffers;
+        pool_sizes[4].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        pool_sizes[4].descriptorCount = 1;
+
+        VkDescriptorPoolCreateInfo dpci = {};
+        dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        dpci.pNext = nullptr;
+        dpci.maxSets = 1;
+        dpci.flags =
+            VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT |
+            VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+        dpci.poolSizeCount = 5;
+        dpci.pPoolSizes = pool_sizes;
+
+        if(vkCreateDescriptorPool(device, &dpci, nullptr, &bindless_pool) != VK_SUCCESS)
+        {
+            return error_t::descriptor_pool_creation_fail;
+        }
+
+        VkDescriptorSetLayoutBinding dslb[5] = {};
+
+        dslb[0].binding = BINDLESS_SAMPLED_IMAGES_SLOT;
+        dslb[0].descriptorCount = desc.max_bindless_images;
+        dslb[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        dslb[0].stageFlags = VK_SHADER_STAGE_ALL;
+
+        dslb[1].binding = BINDLESS_STORAGE_IMAGES_SLOT;
+        dslb[1].descriptorCount = desc.max_bindless_images;
+        dslb[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        dslb[1].stageFlags = VK_SHADER_STAGE_ALL;
+
+        dslb[2].binding = BINDLESS_SAMPLERS_SLOT;
+        dslb[2].descriptorCount = desc.max_bindless_samplers;
+        dslb[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        dslb[2].stageFlags = VK_SHADER_STAGE_ALL;
+
+        dslb[3].binding = BINDLESS_BUFFERS_SLOT;
+        dslb[3].descriptorCount = desc.max_bindless_buffers;
+        dslb[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        dslb[3].stageFlags = VK_SHADER_STAGE_ALL;
+
+        dslb[4].binding = BINDLESS_HANDLE_BUFFER_SLOT;
+        dslb[4].descriptorCount = 1;
+        dslb[4].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        dslb[4].stageFlags = VK_SHADER_STAGE_ALL;
+
+        VkDescriptorBindingFlags flags[] =
+        {
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+            VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+            VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+            VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
+            VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            0
+        };
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo dslbfci = {};
+        dslbfci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        dslbfci.pNext = nullptr;
+        dslbfci.pBindingFlags = flags;
+        dslbfci.bindingCount = 5;
+
+        VkDescriptorSetLayoutCreateInfo dslci = {};
+        dslci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        dslci.pNext = &dslbfci;
+        dslci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        dslci.bindingCount = 5;
+        dslci.pBindings = dslb;
+
+        if(vkCreateDescriptorSetLayout(device, &dslci, nullptr, &bindless_layout) != VK_SUCCESS)
+        {
+            return error_t::descriptor_set_layout_creation_fail;
+        }
+
+        VkDescriptorSetAllocateInfo dsai = {};
+        dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        dsai.pNext = nullptr;
+        dsai.descriptorSetCount = 1;
+        dsai.pSetLayouts = &bindless_layout;
+        dsai.descriptorPool = bindless_pool;
+
+        if(vkAllocateDescriptorSets(device, &dsai, &bindless_set) != VK_SUCCESS)
+        {
+            return error_t::descriptor_set_allocation_fail;
+        }
+
+        return error_t::success;
+    }
+
+
+    uint32_t device_t::bind(const image_t* image) const
+    {
+        auto index = image_slots.allocate();
+
+        VkDescriptorImageInfo sampled_info = {};
+        sampled_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        sampled_info.imageView = image->get_view();
+        sampled_info.sampler = VK_NULL_HANDLE;
+
+        VkDescriptorImageInfo storage_info = sampled_info;
+        storage_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.pNext = nullptr;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        write.descriptorCount = 1;
+        write.dstSet = bindless_set;
+        write.dstBinding = BINDLESS_SAMPLED_IMAGES_SLOT;
+        write.dstArrayElement = index;
+        write.pBufferInfo = nullptr;
+        write.pImageInfo = &sampled_info;
+        write.pTexelBufferView = nullptr;
+
+        uint32_t writes_count = 0;
+        array_t<VkWriteDescriptorSet, 2> writes;
+
+        if (image->get_info().usage | usage_sampled)
+        {
+            writes[writes_count++] = write; 
+        }
+
+        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        write.dstBinding = BINDLESS_STORAGE_IMAGES_SLOT;
+        write.pImageInfo = &storage_info;
+
+        if (image->get_info().usage | usage_storage)
+        {
+            writes[writes_count++] = write; 
+        }
+        
+        vkUpdateDescriptorSets(device, writes_count, writes.data(), 0, nullptr);
+        return index;
+    }
+
+
+    uint32_t device_t::bind(const buffer_t* buffer) const
+    {
+        auto index = buffer_slots.allocate();
+
+        VkDescriptorBufferInfo info = {};
+        info.buffer = buffer->get_handle();
+        info.offset = 0;
+        info.range = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.pNext = nullptr;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        write.descriptorCount = 1;
+        write.dstSet = bindless_set;
+        write.dstBinding = BINDLESS_BUFFERS_SLOT;
+        write.dstArrayElement = index;
+        write.pBufferInfo = &info;
+        write.pImageInfo = nullptr;
+        write.pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+        return index;
+    }
+
+
+    uint32_t device_t::bind(const sampler_t* sampler) const
+    {
+        auto index = sampler_slots.allocate();
+
+        VkDescriptorImageInfo info = {};
+        info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        info.imageView = VK_NULL_HANDLE;
+        info.sampler = sampler->get_handle();
+
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.pNext = nullptr;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        write.descriptorCount = 1;
+        write.dstSet = bindless_set;
+        write.dstBinding = BINDLESS_SAMPLERS_SLOT;
+        write.dstArrayElement = index;
+        write.pBufferInfo = nullptr;
+        write.pImageInfo = &info;
+        write.pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+        return index;
+    }
+
+
+    void device_t::destroy_bindless_system()
+    {
+        vkDestroyDescriptorPool(device, bindless_pool, nullptr);
+        vkDestroyDescriptorSetLayout(device, bindless_layout, nullptr);
     }
 
 }

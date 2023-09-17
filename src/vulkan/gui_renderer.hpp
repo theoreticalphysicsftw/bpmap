@@ -57,7 +57,6 @@ namespace bpmap
 
         vk::buffer_t vertex_buffer;
         vk::buffer_t index_buffer;
-        vk::buffer_t gui_data_buffer;
 
         gui_data_t gui_data;
 
@@ -68,10 +67,6 @@ namespace bpmap
         vk::sampler_registry_t* sampler_registry;
 
         error_t setup_font_texture();
-        error_t create_descriptor_sets_layout();
-        error_t create_descriptor_pool();
-        error_t create_descriptor_sets();
-        error_t update_descriptor_sets();
         error_t create_pipeline_layout();
         error_t create_pipeline();
         error_t create_renderpass();

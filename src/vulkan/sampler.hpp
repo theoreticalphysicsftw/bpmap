@@ -53,12 +53,14 @@ namespace bpmap::vk
     {
         const device_t* dev;
         VkSampler sampler;
+        uint32_t slot;
         
         sampler_t(const sampler_t& other) = delete;
         sampler_t& operator=(const sampler_t& other) = delete;
 
         public:
         VkSampler get_handle() const { return sampler; }
+        uint32_t get_slot() const { return slot; }
         
         error_t create(const device_t& device, const sampler_desc_t& desc);
 

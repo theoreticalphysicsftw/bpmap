@@ -40,6 +40,8 @@ namespace bpmap
         transform3d_embedded_t projection;
         float_t render_a;
         float_t render_gamma;
+        uint32_t font_texture_id;
+        uint32_t font_sampler_id;
     };
 
     struct draw_call_t

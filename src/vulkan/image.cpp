@@ -121,7 +121,8 @@ namespace bpmap::vk
         {
             return error_t::image_view_creation_fail;
         }
-                          
+
+        slot = device.bind(this);
         return error_t::success;
     }
 
@@ -133,6 +134,7 @@ namespace bpmap::vk
         image = VK_NULL_HANDLE;
         view = VK_NULL_HANDLE;
         wrapped = false;
+        slot = INVALID_SLOT;
     }
 
 

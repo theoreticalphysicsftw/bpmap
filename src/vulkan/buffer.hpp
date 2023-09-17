@@ -28,6 +28,7 @@ namespace bpmap::vk
         size_t size = 0;
         uint32_t usage = 0;
         bool_t on_gpu = true; 
+        bool_t dont_bind = false;
     };
 
     static constexpr uint32_t buffer_usage_transfer_src =
@@ -49,6 +50,7 @@ namespace bpmap::vk
         VmaAllocation allocation;
         VkBuffer buffer;
         size_t size;
+        uint32_t slot;
 
         buffer_t(const buffer_t&) = delete;
         buffer_t& operator=(const buffer_t&) = delete;
@@ -56,6 +58,7 @@ namespace bpmap::vk
     public:
         VkBuffer get_handle() const { return buffer; }
         size_t get_size() const { return size; }
+        uint32_t get_slot() const { return slot; }
         error_t create(const device_t& device, const buffer_desc_t& desc);
 
         error_t map(void** data);
